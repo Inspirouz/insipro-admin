@@ -1,13 +1,20 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { apiClient } from '../lib/api';
+import { fetchTags, createTag, updateTag, deleteTag } from '../lib/api/tagsApi';
+import type { TagItem } from '../lib/api/tagsApi';
 import type { TaxonomyItem } from '../lib/types';
 import { PageHeader } from '../components/PageHeader';
 import { SearchInput } from '../components/SearchInput';
 import { TaxonomyGrid } from '../components/TaxonomyGrid';
 import { AddTaxonomyDialog } from '../components/AddTaxonomyDialog';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+
+const TAG_TYPE = 'patterns';
+
+function toTaxonomyItem(tag: TagItem): TaxonomyItem {
+  return { id: tag.id, name: tag.name, type: 'pattern' };
+}
 
 export function PatternsPage() {
   const [items, setItems] = useState<TaxonomyItem[]>([]);
@@ -24,8 +31,11 @@ export function PatternsPage() {
 
   const loadData = async () => {
     try {
-      const data = await apiClient.listTaxonomy('pattern');
-      setItems(data);
+      const data = await fetchTags();
+      setItems(data.map(toTaxonomyItem));
+    } catch (e) {
+      console.error(e);
+      setItems([]);
     } finally {
       setLoading(false);
     }
@@ -33,9 +43,9 @@ export function PatternsPage() {
 
   const handleSave = async (name: string) => {
     if (editingItem) {
-      await apiClient.updateTaxonomy(editingItem.id, name);
+      await updateTag(editingItem.id, { name: name.trim(), type: TAG_TYPE });
     } else {
-      await apiClient.createTaxonomy('pattern', name);
+      await createTag(name, TAG_TYPE);
     }
     setEditingItem(null);
     loadData();
@@ -47,7 +57,7 @@ export function PatternsPage() {
     if (!deleteTargetId) return;
     setDeleting(true);
     try {
-      await apiClient.deleteTaxonomy(deleteTargetId);
+      await deleteTag(deleteTargetId);
       setDeleteTargetId(null);
       loadData();
     } catch (e) {

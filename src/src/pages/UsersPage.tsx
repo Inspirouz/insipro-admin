@@ -73,7 +73,7 @@ export function UsersPage() {
             placeholder="Поиск по email или имени..."
           />
         </div>
-        <select
+        {/* <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           className="px-4 py-2.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg focus:outline-none focus:border-[#a3e635] transition-colors"
@@ -84,7 +84,7 @@ export function UsersPage() {
           <option value="past_due">Просрочена</option>
           <option value="canceled">Отменена</option>
           <option value="expired">Истекла</option>
-        </select>
+        </select> */}
       </div>
 
       {loading ? (
@@ -101,7 +101,7 @@ export function UsersPage() {
                   <th className="px-6 py-4 text-left text-sm font-medium text-[#a1a1a1]">План</th>
                   <th className="px-6 py-4 text-left text-sm font-medium text-[#a1a1a1]">Окончание</th>
                   <th className="px-6 py-4 text-left text-sm font-medium text-[#a1a1a1]">Создан</th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-[#a1a1a1]">Действия</th>
+                  {/* <th className="px-6 py-4 text-left text-sm font-medium text-[#a1a1a1]">Действия</th> */}
                 </tr>
               </thead>
               <tbody>
@@ -121,7 +121,7 @@ export function UsersPage() {
                     <td className="px-6 py-4 text-sm text-[#a1a1a1]">
                       {new Date(user.createdAt).toLocaleDateString('ru-RU')}
                     </td>
-                    <td className="px-6 py-4">
+                    {/* <td className="px-6 py-4">
                       {editingUserId === user.id ? (
                         <div className="flex gap-2">
                           <select
@@ -151,7 +151,7 @@ export function UsersPage() {
                           Изменить
                         </button>
                       )}
-                    </td>
+                    </td> */}
                   </tr>
                 ))}
               </tbody>

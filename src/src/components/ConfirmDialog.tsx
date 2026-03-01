@@ -33,12 +33,16 @@ export function ConfirmDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
-        className="absolute inset-0 min-h-full min-w-full bg-transparent"
+        className="absolute inset-0 min-h-full min-w-full bg-black/80"
+        style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}
         onClick={loading ? undefined : onClose}
         aria-hidden
       />
 
-      <div className="relative w-full max-w-md bg-bg-secondary border border-border rounded-xl shadow-soft-lg p-6">
+      <div
+        className="relative w-full max-w-md border border-border rounded-xl shadow-soft-lg p-6 bg-[#141414]"
+        style={{ backgroundColor: '#141414' }}
+      >
         <h2 className="text-lg font-medium mb-2">{title}</h2>
         <p className="text-text-secondary text-sm mb-6">{description}</p>
 
