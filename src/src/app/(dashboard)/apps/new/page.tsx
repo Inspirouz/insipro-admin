@@ -1,18 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
-import { apiClient } from '@/lib/api';
-import type { TaxonomyItem } from '@/lib/types';
+import { fetchCategories } from '@/lib/api/categoriesApi';
+import type { CategoryItem } from '@/lib/api/categoriesApi';
 import { PageHeader } from '@/components/PageHeader';
 import { ImageUploadSlot } from '@/components/ImageUploadSlot';
+import { createProject } from '@/lib/api/projectsApi';
 
 export default function NewAppPage() {
-  const router = useRouter();
+  const router = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [categories, setCategories] = useState<TaxonomyItem[]>([]);
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -28,7 +28,7 @@ export default function NewAppPage() {
   }, []);
 
   const loadCategories = async () => {
-    const data = await apiClient.listTaxonomy('appCategory');
+    const data = await fetchCategories();
     setCategories(data);
     if (data.length > 0) {
       setFormData(prev => ({ ...prev, categoryId: data[0].id }));
@@ -40,15 +40,15 @@ export default function NewAppPage() {
     setLoading(true);
 
     try {
-      const app = await apiClient.createApp({
+      const app = await createProject({
         name: formData.name,
         description: formData.description,
-        iconUrl: formData.iconUrl || '',
-        previewUrls: formData.previewUrls.filter((url): url is string => url !== null),
-        categoryId: formData.categoryId,
-        platforms: formData.platforms,
+        logo: formData.iconUrl || null,
+        images: formData.previewUrls.filter((u): u is string => u != null),
+        platforms: formData.platforms.map((p) => p.toUpperCase()),
+        categoryIds: formData.categoryId ? [formData.categoryId] : [],
       });
-      router.push(`/apps/${app.id}`);
+      router(`/apps/${app.id}`, { replace: true });
     } catch (error) {
       console.error('Failed to create app:', error);
     } finally {
@@ -68,7 +68,7 @@ export default function NewAppPage() {
   return (
     <div className="p-8">
       <Link
-        href="/apps"
+        to="/apps"
         className="inline-flex items-center gap-2 text-[#a1a1a1] hover:text-white transition-colors mb-6"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -187,7 +187,7 @@ export default function NewAppPage() {
             {loading ? 'Сохранение...' : 'Сохранить'}
           </button>
           <Link
-            href="/apps"
+            to="/apps"
             className="px-6 py-2.5 bg-[#1a1a1a] border border-[#2a2a2a] text-white font-medium rounded-lg hover:bg-[#242424] transition-colors"
           >
             Отмена

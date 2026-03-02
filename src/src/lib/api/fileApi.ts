@@ -9,10 +9,14 @@ const getApiBase = (): string => {
   }
 };
 
-function fileUploadUrl(): string {
+function fileBaseUrl(): string {
   const base = getApiBase();
   const path = base ? '/file' : '/api/file';
   return base ? `${base.replace(/\/$/, '')}${path}` : path;
+}
+
+function fileUploadUrl(): string {
+  return fileBaseUrl();
 }
 
 function fileUploadHeaders(): HeadersInit {
@@ -62,4 +66,26 @@ export async function uploadFile(file: File): Promise<string> {
     throw new Error('No URL in upload response');
   }
   return url.trim();
+}
+
+/**
+ * DELETE /api/file/{id}
+ */
+export async function deleteFile(id: string): Promise<void> {
+  const url = `${fileBaseUrl()}/${encodeURIComponent(id)}`;
+  const res = await fetch(url, {
+    method: 'DELETE',
+    headers: fileUploadHeaders(),
+  });
+
+  if (!res.ok) {
+    let msg = `Delete failed: ${res.status}`;
+    try {
+      const json = (await res.json()) as { message?: string };
+      if (typeof json.message === 'string') msg = json.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(msg);
+  }
 }

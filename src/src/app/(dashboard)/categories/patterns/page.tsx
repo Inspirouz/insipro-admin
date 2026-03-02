@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { ArrowLeft, Plus } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import { fetchTags, createTag, updateTag, deleteTag } from '@/lib/api/tagsApi';
 import type { TagItem } from '@/lib/api/tagsApi';
 import type { TaxonomyItem } from '@/lib/types';
@@ -27,13 +27,10 @@ export default function PatternsPage() {
   const [deleting, setDeleting] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = async (searchTerm?: string) => {
+    setLoading(true);
     try {
-      const data = await fetchTags(TAG_TYPE);
+      const data = await fetchTags(TAG_TYPE, searchTerm);
       setItems(data.map(toTaxonomyItem));
     } catch (e) {
       console.error(e);
@@ -43,6 +40,11 @@ export default function PatternsPage() {
     }
   };
 
+  useEffect(() => {
+    const t = setTimeout(() => loadData(search.trim() || undefined), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
   const handleSave = async (name: string) => {
     if (editingItem) {
       await updateTag(editingItem.id, { name: name.trim(), type: TAG_TYPE });
@@ -50,7 +52,7 @@ export default function PatternsPage() {
       await createTag(name, TAG_TYPE);
     }
     setEditingItem(null);
-    loadData();
+    loadData(search.trim() || undefined);
   };
 
   const handleDeleteClick = (id: string) => setDeleteTargetId(id);
@@ -61,7 +63,7 @@ export default function PatternsPage() {
     try {
       await deleteTag(deleteTargetId);
       setDeleteTargetId(null);
-      loadData();
+      loadData(search.trim() || undefined);
     } catch (e) {
       console.error(e);
     } finally {
@@ -69,14 +71,12 @@ export default function PatternsPage() {
     }
   };
 
-  const filteredItems = items.filter(item =>
-    item.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredItems = items;
 
   return (
     <div className="p-8">
       <Link
-        href="/categories"
+        to="/categories"
         className="inline-flex items-center gap-2 text-[#a1a1a1] hover:text-white transition-colors mb-6"
       >
         <ArrowLeft className="h-4 w-4" />

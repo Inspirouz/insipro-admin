@@ -4,11 +4,11 @@ import { logout } from '../lib/auth';
 
 const navigation = [
   { name: 'Приложения', href: '/apps', icon: LayoutGrid },
-  { name: 'Экраны', href: '/screens', icon: Monitor },
+  // { name: 'Экраны', href: '/screens', icon: Monitor },
   { name: 'Категории', href: '/categories', icon: Tags },
   { name: 'Пользователи', href: '/users', icon: Users },
   { name: 'Администраторы', href: '/admins', icon: ShieldCheck },
-  { name: 'Настройки', href: '/settings', icon: Settings },
+  // { name: 'Настройки', href: '/settings', icon: Settings },
 ];
 
 export function Sidebar() {

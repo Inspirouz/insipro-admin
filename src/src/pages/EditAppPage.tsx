@@ -65,6 +65,7 @@ export function EditAppPage() {
         name: formData.name,
         description: formData.description,
         logo: formData.iconUrl || null,
+        images: formData.previewUrls.filter((u): u is string => u != null),
         platforms: formData.platforms.map((p) => p.toUpperCase()),
         categoryIds: formData.categoryId ? [formData.categoryId] : [],
       });

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Tag, Grid3x3, FolderOpen } from 'lucide-react';
+import { Tag, Grid3x3, FolderOpen, LayoutGrid } from 'lucide-react';
 import { PageHeader } from '../components/PageHeader';
 
 const categories = [
@@ -26,6 +26,14 @@ const categories = [
     icon: FolderOpen,
     href: '/categories/app',
     color: 'from-orange-500/20 to-red-500/20',
+  },
+  {
+    id: 'screens',
+    title: 'Категория экрана',
+    description: 'Категории экранов приложений',
+    icon: LayoutGrid,
+    href: '/categories/screens',
+    color: 'from-cyan-500/20 to-blue-500/20',
   },
 ];
 

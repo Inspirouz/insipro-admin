@@ -2,10 +2,16 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { apiClient } from '../lib/api';
+import { fetchTags } from '../lib/api/tagsApi';
+import { fetchScreensCategories } from '../lib/api/screensCategoriesApi';
 import type { TaxonomyItem, Scenario } from '../lib/types';
 import { PageHeader } from '../components/PageHeader';
 import { ImageUploadSlot } from '../components/ImageUploadSlot';
 import { MultiSelectField } from '../components/MultiSelectField';
+
+function tagToTaxonomy(tag: { id: string; name: string }, type: TaxonomyItem['type']): TaxonomyItem {
+  return { id: tag.id, name: tag.name, type };
+}
 
 export function NewScreenPage() {
   const { id: appId } = useParams<{ id: string }>();
@@ -30,12 +36,17 @@ export function NewScreenPage() {
   }, []);
 
   const loadData = async () => {
-    const [categoriesData, uiData, patternsData, scenariosData] = await Promise.all([
-      apiClient.listTaxonomy('screenCategory'),
-      apiClient.listTaxonomy('uiElement'),
-      apiClient.listTaxonomy('pattern'),
+    const [screenCategoriesData, uiData, patternsData, scenariosData] = await Promise.all([
+      fetchScreensCategories(),
+      fetchTags('ui').then((tags) => tags.map((t) => tagToTaxonomy(t, 'uiElement'))),
+      fetchTags('patterns').then((tags) => tags.map((t) => tagToTaxonomy(t, 'pattern'))),
       apiClient.listScenarios(),
     ]);
+    const categoriesData: TaxonomyItem[] = screenCategoriesData.map((c) => ({
+      id: c.id,
+      name: c.name,
+      type: 'screenCategory',
+    }));
     setScreenCategories(categoriesData);
     setUiElements(uiData);
     setPatterns(patternsData);

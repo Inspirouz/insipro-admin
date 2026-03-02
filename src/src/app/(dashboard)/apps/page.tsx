@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import {Link} from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 import type { App, TaxonomyItem } from '@/lib/types';
@@ -46,7 +46,7 @@ export default function AppsPage() {
         title="Приложения"
         actions={
           <Link
-            href="/apps/new"
+            to="/apps/new"
             className="flex items-center gap-2 px-4 py-2.5 bg-white text-black font-medium rounded-lg hover:bg-gray-100 transition-colors"
           >
             <Plus className="h-4 w-4" />
@@ -69,7 +69,7 @@ export default function AppsPage() {
         <div className="text-center py-12">
           <p className="text-[#a1a1a1] mb-4">Приложения не найдены</p>
           <Link
-            href="/apps/new"
+            to="/apps/new"
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-white text-black font-medium rounded-lg hover:bg-gray-100 transition-colors"
           >
             <Plus className="h-4 w-4" />
@@ -81,13 +81,13 @@ export default function AppsPage() {
           {filteredApps.map((app) => (
             <Link
               key={app.id}
-              href={`/apps/${app.id}`}
+              to={`/apps/${app.id}`}
               className="group bg-[#141414] border border-[#2a2a2a] rounded-xl overflow-hidden hover:border-[#3a3a3a] transition-all hover:shadow-soft"
             >
               <div className="aspect-[16/9] bg-[#1a1a1a] relative overflow-hidden">
-                {app.previewUrls[0] ? (
+                {(app.previewUrls[0] || app.iconUrl) ? (
                   <img
-                    src={app.previewUrls[0]}
+                    src={app.previewUrls[0] || app.iconUrl || ''}
                     alt={app.name}
                     className="w-full h-full object-cover"
                   />

@@ -1,8 +1,13 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { fetchTags, createTag, updateTag, deleteTag } from '../lib/api/tagsApi';
-import type { TagItem } from '../lib/api/tagsApi';
+import {
+  fetchScreensCategories,
+  createScreenCategory,
+  updateScreenCategory,
+  deleteScreenCategory,
+} from '../lib/api/screensCategoriesApi';
+import type { ScreenCategoryItem } from '../lib/api/screensCategoriesApi';
 import type { TaxonomyItem } from '../lib/types';
 import { PageHeader } from '../components/PageHeader';
 import { SearchInput } from '../components/SearchInput';
@@ -10,13 +15,11 @@ import { TaxonomyGrid } from '../components/TaxonomyGrid';
 import { AddTaxonomyDialog } from '../components/AddTaxonomyDialog';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 
-const TAG_TYPE = 'ui';
-
-function toTaxonomyItem(tag: TagItem): TaxonomyItem {
-  return { id: tag.id, name: tag.name, type: 'uiElement' };
+function toTaxonomyItem(item: ScreenCategoryItem): TaxonomyItem {
+  return { id: item.id, name: item.name, type: 'screenCategory' };
 }
 
-export function UIElementsPage() {
+export function ScreenCategoriesPage() {
   const [items, setItems] = useState<TaxonomyItem[]>([]);
   const [search, setSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -25,11 +28,10 @@ export function UIElementsPage() {
   const [deleting, setDeleting] = useState(false);
   const [loading, setLoading] = useState(true);
 
-
   const loadData = async (searchTerm?: string) => {
     setLoading(true);
     try {
-      const data = await fetchTags(TAG_TYPE, searchTerm);
+      const data = await fetchScreensCategories(searchTerm);
       setItems(data.map(toTaxonomyItem));
     } catch (e) {
       console.error(e);
@@ -46,9 +48,9 @@ export function UIElementsPage() {
 
   const handleSave = async (name: string) => {
     if (editingItem) {
-      await updateTag(editingItem.id, { name: name.trim(), type: TAG_TYPE });
+      await updateScreenCategory(editingItem.id, { name: name.trim() });
     } else {
-      await createTag(name, TAG_TYPE);
+      await createScreenCategory(name);
     }
     setEditingItem(null);
     loadData(search.trim() || undefined);
@@ -60,7 +62,7 @@ export function UIElementsPage() {
     if (!deleteTargetId) return;
     setDeleting(true);
     try {
-      await deleteTag(deleteTargetId);
+      await deleteScreenCategory(deleteTargetId);
       setDeleteTargetId(null);
       loadData(search.trim() || undefined);
     } catch (e) {
@@ -83,7 +85,7 @@ export function UIElementsPage() {
       </Link>
 
       <PageHeader
-        title="UI Элементы"
+        title="Категория экрана"
         actions={
           <button
             onClick={() => {
@@ -102,7 +104,7 @@ export function UIElementsPage() {
         <SearchInput
           value={search}
           onChange={setSearch}
-          placeholder="Поиск элементов..."
+          placeholder="Поиск категорий экрана..."
         />
       </div>
 
@@ -110,7 +112,7 @@ export function UIElementsPage() {
         <div className="text-center py-12 text-[#a1a1a1]">Загрузка...</div>
       ) : filteredItems.length === 0 ? (
         <div className="text-center py-12 text-[#a1a1a1]">
-          {search ? 'Ничего не найдено' : 'Элементы не добавлены'}
+          {search ? 'Ничего не найдено' : 'Категории экрана не добавлены'}
         </div>
       ) : (
         <TaxonomyGrid
@@ -127,8 +129,8 @@ export function UIElementsPage() {
         isOpen={!!deleteTargetId}
         onClose={() => setDeleteTargetId(null)}
         onConfirm={handleDeleteConfirm}
-        title="Удалить элемент?"
-        description="Вы уверены, что хотите удалить этот элемент? Это действие нельзя отменить."
+        title="Удалить категорию?"
+        description="Вы уверены, что хотите удалить эту категорию экрана? Это действие нельзя отменить."
         confirmLabel="Удалить"
         cancelLabel="Отмена"
         variant="danger"
@@ -142,7 +144,7 @@ export function UIElementsPage() {
           setEditingItem(null);
         }}
         onSave={handleSave}
-        title={editingItem ? 'Редактировать элемент' : 'Добавить UI элемент'}
+        title={editingItem ? 'Редактировать категорию' : 'Добавить категорию экрана'}
         initialValue={editingItem?.name}
       />
     </div>

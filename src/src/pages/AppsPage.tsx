@@ -84,9 +84,9 @@ export function AppsPage() {
               className="group bg-bg-secondary border border-border rounded-xl overflow-hidden hover:border-border-hover transition-all hover:shadow-soft"
             >
               <div className="aspect-video bg-bg-tertiary relative overflow-hidden">
-                {app.previewUrls[0] ? (
+                {(app.previewUrls[0] || app.iconUrl) ? (
                   <img
-                    src={app.previewUrls[0]}
+                    src={app.previewUrls[0] || app.iconUrl || ''}
                     alt={app.name}
                     className="w-full h-full object-cover"
                   />

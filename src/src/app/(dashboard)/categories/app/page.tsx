@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { ArrowLeft, Plus } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import { fetchAppCategories, createCategory, updateCategory, deleteCategory } from '@/lib/api/categoriesApi';
 import type { TaxonomyItem } from '@/lib/types';
 import { PageHeader } from '@/components/PageHeader';
@@ -66,7 +66,7 @@ export default function AppCategoriesPage() {
   return (
     <div className="p-8">
       <Link
-        href="/categories"
+        to="/categories"
         className="inline-flex items-center gap-2 text-[#a1a1a1] hover:text-white transition-colors mb-6"
       >
         <ArrowLeft className="h-4 w-4" />

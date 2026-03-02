@@ -25,13 +25,10 @@ export function PatternsPage() {
   const [deleting, setDeleting] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = async (searchTerm?: string) => {
+    setLoading(true);
     try {
-      const data = await fetchTags();
+      const data = await fetchTags(TAG_TYPE, searchTerm);
       setItems(data.map(toTaxonomyItem));
     } catch (e) {
       console.error(e);
@@ -41,6 +38,11 @@ export function PatternsPage() {
     }
   };
 
+  useEffect(() => {
+    const t = setTimeout(() => loadData(search.trim() || undefined), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
   const handleSave = async (name: string) => {
     if (editingItem) {
       await updateTag(editingItem.id, { name: name.trim(), type: TAG_TYPE });
@@ -48,7 +50,7 @@ export function PatternsPage() {
       await createTag(name, TAG_TYPE);
     }
     setEditingItem(null);
-    loadData();
+    loadData(search.trim() || undefined);
   };
 
   const handleDeleteClick = (id: string) => setDeleteTargetId(id);
@@ -59,7 +61,7 @@ export function PatternsPage() {
     try {
       await deleteTag(deleteTargetId);
       setDeleteTargetId(null);
-      loadData();
+      loadData(search.trim() || undefined);
     } catch (e) {
       console.error(e);
     } finally {
@@ -67,9 +69,7 @@ export function PatternsPage() {
     }
   };
 
-  const filteredItems = items.filter(item =>
-    item.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredItems = items;
 
   return (
     <div className="p-8">

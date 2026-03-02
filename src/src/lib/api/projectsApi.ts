@@ -10,13 +10,13 @@ const getApiBase = (): string => {
   }
 };
 
-/** Base URL for project images: https://dev.api.inspiro.uz/api/projects/{path} */
+/** Base URL for project images: https://dev.api.inspiro.uz/images/{path} */
 const getProjectImageBase = (): string => {
   try {
     const env = (import.meta as { env?: { VITE_PROJECTS_IMAGE_BASE?: string } }).env;
-    return env?.VITE_PROJECTS_IMAGE_BASE ?? 'https://dev.api.inspiro.uz/api/projects';
+    return env?.VITE_PROJECTS_IMAGE_BASE ?? 'https://dev.api.inspiro.uz/images';
   } catch {
-    return 'https://dev.api.inspiro.uz/api/projects';
+    return 'https://dev.api.inspiro.uz/images';
   }
 };
 
@@ -184,6 +184,7 @@ export interface CreateProjectBody {
   name: string;
   description: string;
   logo?: string | null;
+  images?: string[];
   platforms: string[];
   categoryIds: string[];
 }
@@ -207,6 +208,7 @@ export async function createProject(body: CreateProjectBody): Promise<App> {
       name: body.name,
       description: body.description,
       logo: body.logo || null,
+      images: body.images ?? [],
       platforms: body.platforms,
       categoryIds: body.categoryIds,
     }),
@@ -229,6 +231,7 @@ export interface UpdateProjectBody {
   name: string;
   description: string;
   logo?: string | null;
+  images?: string[];
   platforms: string[];
   categoryIds: string[];
 }
@@ -253,6 +256,7 @@ export async function updateProject(id: string, body: UpdateProjectBody): Promis
       name: body.name,
       description: body.description,
       logo: body.logo || null,
+      images: body.images ?? [],
       platforms: body.platforms,
       categoryIds: body.categoryIds,
     }),

@@ -1,15 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { ArrowLeft, Pencil, Plus } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 import type { App, Screen, TaxonomyItem } from '@/lib/types';
 
 export default function AppDetailPage() {
   const params = useParams();
-  const router = useRouter();
+
   const appId = params.id as string;
 
   const [app, setApp] = useState<App | null>(null);
@@ -67,7 +67,7 @@ export default function AppDetailPage() {
   return (
     <div className="p-8">
       <Link
-        href="/apps"
+        to="/apps"
         className="inline-flex items-center gap-2 text-[#a1a1a1] hover:text-white transition-colors mb-6"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -105,7 +105,7 @@ export default function AppDetailPage() {
             </div>
           </div>
           <Link
-            href={`/apps/${app.id}/edit`}
+            to={`/apps/${app.id}/edit`}
             className="flex items-center gap-2 px-4 py-2.5 bg-white text-black font-medium rounded-lg hover:bg-gray-100 transition-colors"
           >
             <Pencil className="h-4 w-4" />
@@ -189,7 +189,7 @@ export default function AppDetailPage() {
                   : 'Все экраны'}
               </h2>
               <Link
-                href={`/apps/${app.id}/screens/new`}
+                to={`/apps/${app.id}/screens/new`}
                 className="flex items-center gap-2 px-4 py-2.5 bg-white text-black font-medium rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <Plus className="h-4 w-4" />
@@ -201,7 +201,7 @@ export default function AppDetailPage() {
               <div className="text-center py-12">
                 <p className="text-[#a1a1a1] mb-4">Экраны не найдены</p>
                 <Link
-                  href={`/apps/${app.id}/screens/new`}
+                  to={`/apps/${app.id}/screens/new`}
                   className="inline-flex items-center gap-2 px-4 py-2.5 bg-white text-black font-medium rounded-lg hover:bg-gray-100 transition-colors"
                 >
                   <Plus className="h-4 w-4" />
@@ -213,7 +213,7 @@ export default function AppDetailPage() {
                 {filteredScreens.map((screen) => (
                   <Link
                     key={screen.id}
-                    href={`/screens/${screen.id}`}
+                    to={`/screens/${screen.id}`}
                     className="group bg-[#141414] border border-[#2a2a2a] rounded-xl overflow-hidden hover:border-[#3a3a3a] transition-all hover:shadow-soft"
                   >
                     <div className="aspect-[9/16] bg-[#1a1a1a]">

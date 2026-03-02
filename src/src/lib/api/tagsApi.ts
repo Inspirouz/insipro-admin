@@ -39,12 +39,17 @@ interface ListResponse {
 /**
  * GET /api/admin/tags
  * @param type optional filter e.g. "patterns"
+ * @param search optional search query (backend filter)
  */
-export async function fetchTags(type?: string): Promise<TagItem[]> {
-  const url = new URL(tagsUrl());
-  if (type) url.searchParams.set('type', type);
+export async function fetchTags(type?: string, search?: string): Promise<TagItem[]> {
+  const baseUrl = tagsUrl();
+  const params = new URLSearchParams();
+  if (type) params.set('type', type);
+  if (search && search.trim()) params.set('search', search.trim());
+  const query = params.toString();
+  const url = query ? `${baseUrl}?${query}` : baseUrl;
 
-  const res = await fetch(url.toString(), { method: 'GET', headers: tagsHeaders() });
+  const res = await fetch(url, { method: 'GET', headers: tagsHeaders() });
   const json: ListResponse | TagItem[] = await res.json();
 
   if (!res.ok) {
