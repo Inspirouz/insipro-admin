@@ -9,22 +9,21 @@ const getApiBase = (): string => {
   }
 };
 
-export interface ScreenCategoryItem {
+export interface ScenarioCategoryItem {
   id: string;
   name: string;
-  screens_count?:number;
+  sort_order?: number;
+  parent_id?: string | null;
   is_active?: boolean;
   is_deleted?: boolean;
   created_at?: string;
   updated_at?: string;
   deleted_at?: string | null;
-  sort_order?: number;
-  [key: string]: unknown;
 }
 
-function screensCategoriesUrl(pathSuffix?: string): string {
+function scenariosCategoriesUrl(pathSuffix?: string): string {
   const base = getApiBase();
-  const path = base ? '/admin/screens-categories' : '/api/admin/screens-categories';
+  const path = base ? '/admin/scenarios-categories' : '/api/admin/scenarios-categories';
   const url = base ? `${base.replace(/\/$/, '')}${path}` : path;
   return pathSuffix ? `${url}/${pathSuffix}` : url;
 }
@@ -40,27 +39,24 @@ function headers(): HeadersInit {
 interface ListResponse {
   success?: boolean;
   data?: {
-    items?: ScreenCategoryItem[];
+    items?: ScenarioCategoryItem[];
     total?: number;
   };
   message?: string;
 }
 
 /**
- * GET /api/admin/screens-categories
- * @param search optional search query
- * @param projectId optional project_id filter (e.g. for app detail page)
+ * GET /api/admin/scenarios-categories
  */
-export async function fetchScreensCategories(search?: string, projectId?: string): Promise<ScreenCategoryItem[]> {
-  const baseUrl = screensCategoriesUrl();
+export async function fetchScenarioCategories(search?: string): Promise<ScenarioCategoryItem[]> {
+  const baseUrl = scenariosCategoriesUrl();
   const params = new URLSearchParams();
   if (search && search.trim()) params.set('search', search.trim());
-  if (projectId) params.set('project_id', projectId);
   const query = params.toString();
   const url = query ? `${baseUrl}?${query}` : baseUrl;
 
   const res = await fetch(url, { method: 'GET', headers: headers() });
-  const json: ListResponse | ScreenCategoryItem[] = await res.json();
+  const json: ListResponse | ScenarioCategoryItem[] = await res.json();
 
   if (!res.ok) {
     const msg = typeof (json as { message?: string }).message === 'string'
@@ -75,54 +71,65 @@ export async function fetchScreensCategories(search?: string, projectId?: string
 }
 
 /**
- * POST /api/admin/screens-categories
+ * POST /api/admin/scenarios-categories
  */
-export async function createScreenCategory(name: string): Promise<ScreenCategoryItem> {
-  const res = await fetch(screensCategoriesUrl(), {
+export async function createScenarioCategory(
+  name: string,
+  sort_order = 0,
+  parent_id?: string | null,
+): Promise<ScenarioCategoryItem> {
+  const res = await fetch(scenariosCategoriesUrl(), {
     method: 'POST',
     headers: headers(),
-    body: JSON.stringify({ name: name.trim() }),
+    body: JSON.stringify({
+      name: name.trim(),
+      sort_order,
+      ...(parent_id ? { parent_id } : {}),
+    }),
   });
 
-  const json = (await res.json()) as { data?: ScreenCategoryItem; message?: string } & ScreenCategoryItem;
+  const json = (await res.json()) as { data?: ScenarioCategoryItem; message?: string } & ScenarioCategoryItem;
 
   if (!res.ok) {
     const msg = typeof json.message === 'string' ? json.message : `Request failed: ${res.status}`;
     throw new Error(msg);
   }
 
-  const item = json.data ?? (json.id ? (json as ScreenCategoryItem) : null);
+  const item = json.data ?? (json.id ? (json as ScenarioCategoryItem) : null);
   if (item) return item;
-  return { id: '', name: name.trim() };
+  return { id: '', name: name.trim(), sort_order, parent_id: parent_id ?? null };
 }
 
 /**
- * PATCH /api/admin/screens-categories/:id
+ * PATCH /api/admin/scenarios-categories/:id
  */
-export async function updateScreenCategory(id: string, body: { name?: string }): Promise<ScreenCategoryItem> {
-  const res = await fetch(screensCategoriesUrl(encodeURIComponent(id)), {
+export async function updateScenarioCategory(
+  id: string,
+  body: { name?: string; sort_order?: number; parent_id?: string | null },
+): Promise<ScenarioCategoryItem> {
+  const res = await fetch(scenariosCategoriesUrl(encodeURIComponent(id)), {
     method: 'PATCH',
     headers: headers(),
     body: JSON.stringify(body),
   });
 
-  const json = (await res.json()) as { data?: ScreenCategoryItem; message?: string } & ScreenCategoryItem;
+  const json = (await res.json()) as { data?: ScenarioCategoryItem; message?: string } & ScenarioCategoryItem;
 
   if (!res.ok) {
     const msg = typeof json.message === 'string' ? json.message : `Request failed: ${res.status}`;
     throw new Error(msg);
   }
 
-  const item = json.data ?? (json.id ? (json as ScreenCategoryItem) : null);
+  const item = json.data ?? (json.id ? (json as ScenarioCategoryItem) : null);
   if (item) return item;
-  return { id, name: body.name ?? '' };
+  return { id, name: body.name ?? '', sort_order: body.sort_order, parent_id: body.parent_id };
 }
 
 /**
- * DELETE /api/admin/screens-categories/:id
+ * DELETE /api/admin/scenarios-categories/:id
  */
-export async function deleteScreenCategory(id: string): Promise<void> {
-  const res = await fetch(screensCategoriesUrl(encodeURIComponent(id)), {
+export async function deleteScenarioCategory(id: string): Promise<void> {
+  const res = await fetch(scenariosCategoriesUrl(encodeURIComponent(id)), {
     method: 'DELETE',
     headers: headers(),
   });
@@ -138,3 +145,4 @@ export async function deleteScreenCategory(id: string): Promise<void> {
     throw new Error(msg);
   }
 }
+

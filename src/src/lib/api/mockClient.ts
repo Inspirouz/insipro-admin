@@ -18,10 +18,10 @@ class MockApiClient implements ApiClient {
   private initMockData() {
     // App Categories
     const appCategories: TaxonomyItem[] = [
-      { id: 'cat-1', name: 'Финансы', type: 'appCategory' },
-      { id: 'cat-2', name: 'Социальные сети', type: 'appCategory' },
-      { id: 'cat-3', name: 'E-commerce', type: 'appCategory' },
-      { id: 'cat-4', name: 'Продуктивность', type: 'appCategory' },
+      { id: 'cat-1', name: 'Финансы', type: 'appCategory', screens_count:0 },
+      { id: 'cat-2', name: 'Социальные сети', type: 'appCategory',screens_count:0 },
+      { id: 'cat-3', name: 'E-commerce', type: 'appCategory', screens_count:0 },
+      { id: 'cat-4', name: 'Продуктивность', type: 'appCategory', screens_count:0 },
     ];
 
     // Screen Categories

@@ -22,11 +22,12 @@ export interface Screen {
   createdAt: Date;
 }
 
-export type TaxonomyType = 'uiElement' | 'pattern' | 'appCategory' | 'screenCategory';
+export type TaxonomyType = 'uiElement' | 'pattern' | 'appCategory' | 'screenCategory' | 'scenarioCategory';
 
 export interface TaxonomyItem {
   id: string;
   name: string;
+  screens_count?:number;
   type: TaxonomyType;
 }
 

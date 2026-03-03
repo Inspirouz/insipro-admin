@@ -77,77 +77,81 @@ export default function NewAppPage() {
 
       <PageHeader title="Добавить приложение" />
 
-      <form onSubmit={handleSubmit} className="max-w-4xl">
-        <div className="bg-[#141414] border border-[#2a2a2a] rounded-xl p-6 space-y-6">
-          {/* Icon */}
+      <form onSubmit={handleSubmit} className="max-w-5xl">
+        <div className="bg-[#111111] border border-[#2a2a2a] rounded-3xl p-8 space-y-10 !mb-10">
+          {/* Preview block */}
           <div>
-            <ImageUploadSlot
-              value={formData.iconUrl}
-              onChange={(url) => setFormData(prev => ({ ...prev, iconUrl: url }))}
-              label="Иконка приложения"
-              aspectRatio="1"
-            />
-          </div>
-
-          {/* Preview Images */}
-          <div>
-            <label className="block text-sm font-medium mb-3">Превью (до 5 изображений)</label>
-            <div className="grid grid-cols-5 gap-4">
-              {formData.previewUrls.map((url, index) => (
-                <ImageUploadSlot
-                  key={index}
-                  value={url}
-                  onChange={(newUrl) => {
-                    const newPreviews = [...formData.previewUrls];
-                    newPreviews[index] = newUrl;
-                    setFormData(prev => ({ ...prev, previewUrls: newPreviews }));
-                  }}
-                  aspectRatio="9/16"
-                />
-              ))}
+            <h2 className="text-lg font-semibold mb-4">Добавить превью</h2>
+            <div className="rounded-2xl border border-[#2a2a2a] bg-[#141414] px-6 py-6">
+              <div className="grid grid-cols-5 gap-4">
+                {formData.previewUrls.map((url, index) => (
+                  <ImageUploadSlot
+                    key={index}
+                    value={url}
+                    onChange={(newUrl) => {
+                      const newPreviews = [...formData.previewUrls];
+                      newPreviews[index] = newUrl;
+                      setFormData(prev => ({ ...prev, previewUrls: newPreviews }));
+                    }}
+                    aspectRatio="9/16"
+                  />
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Name */}
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium mb-2">
-              Название
-            </label>
-            <input
-              id="name"
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              className="w-full px-4 py-2.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg focus:outline-none focus:border-[#a3e635] transition-colors"
-              required
-            />
-          </div>
-
-          {/* Description */}
-          <div>
-            <label htmlFor="description" className="block text-sm font-medium mb-2">
-              Описание
-            </label>
-            <textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              className="w-full px-4 py-2.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg focus:outline-none focus:border-[#a3e635] transition-colors resize-none"
-              rows={3}
-              required
-            />
+          {/* Logo + main info */}
+          <div className="grid gap-6 md:grid-cols-[minmax(0,220px)_minmax(0,1fr)] items-stretch">
+            <div className="flex md:block">
+              <ImageUploadSlot
+                value={formData.iconUrl}
+                onChange={(url) => setFormData(prev => ({ ...prev, iconUrl: url }))}
+                label="Добавить лого"
+                aspectRatio="1"
+              />
+            </div>
+            <div className="space-y-6">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium mb-2">
+                  Название
+                </label>
+                <input
+                  id="name"
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-4 py-3 bg-[#141414] border border-[#2a2a2a] rounded-xl focus:outline-none focus:border-[#a3e635] transition-colors"
+                  placeholder="Введите название приложения"
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="description" className="block text-sm font-medium mb-2">
+                  Описание
+                </label>
+                <textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full px-4 py-3 bg-[#141414] border border-[#2a2a2a] rounded-xl focus:outline-none focus:border-[#a3e635] transition-colors resize-none"
+                  rows={4}
+                  placeholder="Кратко опишите приложение"
+                  required
+                />
+              </div>
+            </div>
           </div>
 
           {/* Category */}
-          <div>
-            <label htmlFor="category" className="block text-sm font-medium mb-2">
+          <div className="space-y-4">
+            <label htmlFor="category" className="block text-sm font-medium">
               Категория
             </label>
             <select
               id="category"
               value={formData.categoryId}
               onChange={(e) => setFormData(prev => ({ ...prev, categoryId: e.target.value }))}
-              className="w-full px-4 py-2.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg focus:outline-none focus:border-[#a3e635] transition-colors"
+              className="w-full px-4 py-3 bg-[#141414] border border-[#2a2a2a] rounded-xl focus:outline-none focus:border-[#a3e635] transition-colors"
               required
             >
               {categories.map((category) => (
@@ -159,39 +163,45 @@ export default function NewAppPage() {
           </div>
 
           {/* Platforms */}
-          <div>
-            <label className="block text-sm font-medium mb-3">Платформы</label>
-            <div className="flex gap-4">
-              {(['ios', 'android', 'web'] as const).map((platform) => (
-                <label key={platform} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.platforms.includes(platform)}
-                    onChange={() => togglePlatform(platform)}
-                    className="w-4 h-4 rounded border-[#2a2a2a] bg-[#1a1a1a] text-[#a3e635] focus:ring-[#a3e635] focus:ring-offset-0"
-                  />
-                  <span className="text-sm capitalize">{platform}</span>
-                </label>
-              ))}
+          <div className="space-y-4">
+            <label className="block text-sm font-medium">Платформа</label>
+            <div className="inline-flex w-full items-center justify-between rounded-full bg-[#141414] border border-[#2a2a2a] px-2 py-1">
+              {(['ios', 'android', 'web'] as const).map((platform) => {
+                const active = formData.platforms.includes(platform);
+                return (
+                  <button
+                    key={platform}
+                    type="button"
+                    onClick={() => togglePlatform(platform)}
+                    className={`flex-1 mx-1 text-sm py-2 rounded-full transition-colors ${
+                      active ? 'bg-white text-black font-medium' : 'text-[#a1a1a1] hover:text-white'
+                    }`}
+                  >
+                    {platform.toUpperCase()}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
 
         {/* Actions */}
-        <div className="mt-6 flex gap-3">
+        <div className="mt-8 space-y-3 max-w-3xl">
           <button
             type="submit"
             disabled={loading}
-            className="px-6 py-2.5 bg-white text-black font-medium rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-6 py-3 bg-white text-black font-medium rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Сохранение...' : 'Сохранить'}
           </button>
-          <Link
-            to="/apps"
-            className="px-6 py-2.5 bg-[#1a1a1a] border border-[#2a2a2a] text-white font-medium rounded-lg hover:bg-[#242424] transition-colors"
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => router('/apps')}
+            className="w-full text-sm text-[#a1a1a1] hover:text-white transition-colors"
           >
             Отмена
-          </Link>
+          </button>
         </div>
       </form>
     </div>

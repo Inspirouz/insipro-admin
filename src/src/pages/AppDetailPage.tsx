@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Pencil, Plus } from 'lucide-react';
-import { apiClient } from '../lib/api';
 import { fetchProject } from '../lib/api/projectsApi';
+import { fetchScreensCategories } from '../lib/api/screensCategoriesApi';
+import { fetchAdminScreens } from '../lib/api/adminScreensApi';
 import type { App, Screen, TaxonomyItem } from '../lib/types';
 
 export function AppDetailPage() {
@@ -24,12 +25,14 @@ export function AppDetailPage() {
     try {
       const [appData, screensData, categoriesData] = await Promise.all([
         fetchProject(appId),
-        apiClient.listScreens({ appId }),
-        apiClient.listTaxonomy('screenCategory'),
+        fetchAdminScreens(appId),
+        fetchScreensCategories(undefined, appId),
       ]);
       setApp(appData ?? null);
       setScreens(screensData);
-      setScreenCategories(categoriesData);
+      setScreenCategories(
+        categoriesData.map((c) => ({ id: c.id, name: c.name, type: 'screenCategory' as const }))
+      );
     } finally {
       setLoading(false);
     }

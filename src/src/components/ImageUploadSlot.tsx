@@ -1,6 +1,6 @@
 import { Upload, X, Loader2 } from 'lucide-react';
 import { useRef, useState } from 'react';
-import { uploadFile, deleteFile } from '../lib/api/fileApi';
+import { uploadFile, uploadFileWithMeta, deleteFile, UploadedFileMeta } from '../lib/api/fileApi';
 import { getProjectImageUrl } from '../lib/api/projectsApi';
 
 interface ImageUploadSlotProps {
@@ -10,9 +10,11 @@ interface ImageUploadSlotProps {
   fileId?: string | null;
   label?: string;
   aspectRatio?: string;
+  /** Optional callback with full upload meta (id + url/path) */
+  onUploaded?: (meta: UploadedFileMeta) => void;
 }
 
-export function ImageUploadSlot({ value, onChange, fileId, label, aspectRatio = '16/9' }: ImageUploadSlotProps) {
+export function ImageUploadSlot({ value, onChange, fileId, label, aspectRatio = '16/9', onUploaded }: ImageUploadSlotProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [removing, setRemoving] = useState(false);
@@ -24,8 +26,9 @@ export function ImageUploadSlot({ value, onChange, fileId, label, aspectRatio = 
     setUploadError(null);
     setUploading(true);
     try {
-      const url = await uploadFile(file);
-      onChange(url);
+      const meta = await uploadFileWithMeta(file);
+      onChange(meta.url);
+      if (onUploaded) onUploaded(meta);
       if (inputRef.current) inputRef.current.value = '';
     } catch (err) {
       console.error(err);

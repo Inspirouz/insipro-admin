@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Tag, Grid3x3, FolderOpen, LayoutGrid } from 'lucide-react';
+import { Tag, Grid3x3, FolderOpen, LayoutGrid, Shapes } from 'lucide-react';
 import { PageHeader } from '../components/PageHeader';
 
 const categories = [
@@ -34,6 +34,14 @@ const categories = [
     icon: LayoutGrid,
     href: '/categories/screens',
     color: 'from-cyan-500/20 to-blue-500/20',
+  },
+  {
+    id: 'scenarios',
+    title: 'Категории сценариев',
+    description: 'Группы сценариев и их подкатегории',
+    icon: Shapes,
+    href: '/categories/scenarios',
+    color: 'from-pink-500/20 to-indigo-500/20',
   },
 ];
 

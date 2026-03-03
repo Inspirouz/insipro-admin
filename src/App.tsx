@@ -12,6 +12,7 @@ import { UIElementsPage } from './src/pages/UIElementsPage';
 import { PatternsPage } from './src/pages/PatternsPage';
 import { AppCategoriesPage } from './src/pages/AppCategoriesPage';
 import { ScreenCategoriesPage } from './src/pages/ScreenCategoriesPage';
+import { ScenarioCategoriesPage } from './src/pages/ScenarioCategoriesPage';
 import { UsersPage } from './src/pages/UsersPage';
 import { AdminsPage } from './src/pages/AdminsPage';
 import { SettingsPage } from './src/pages/SettingsPage';
@@ -40,6 +41,7 @@ export default function App() {
           <Route path="/categories/patterns" element={<PatternsPage />} />
           <Route path="/categories/app" element={<AppCategoriesPage />} />
           <Route path="/categories/screens" element={<ScreenCategoriesPage />} />
+          <Route path="/categories/scenarios" element={<ScenarioCategoriesPage />} />
           
           <Route path="/users" element={<UsersPage />} />
           <Route path="/admins" element={<AdminsPage />} />

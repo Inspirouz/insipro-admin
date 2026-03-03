@@ -5,6 +5,8 @@ import { useParams } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Pencil, Plus } from 'lucide-react';
 import { apiClient } from '@/lib/api';
+import { fetchScreensCategories } from '@/lib/api/screensCategoriesApi';
+import { fetchAdminScreens } from '@/lib/api/adminScreensApi';
 import type { App, Screen, TaxonomyItem } from '@/lib/types';
 
 export default function AppDetailPage() {
@@ -27,12 +29,14 @@ export default function AppDetailPage() {
     try {
       const [appData, screensData, categoriesData] = await Promise.all([
         apiClient.getApp(appId),
-        apiClient.listScreens({ appId }),
-        apiClient.listTaxonomy('screenCategory'),
+        fetchAdminScreens(appId),
+        fetchScreensCategories(undefined, appId),
       ]);
       setApp(appData);
       setScreens(screensData);
-      setScreenCategories(categoriesData);
+      setScreenCategories(
+        categoriesData.map((c) => ({ id: c.id, name: c.name, type: 'screenCategory' as const, screens_count:c?.screens_count }))
+      );
     } finally {
       setLoading(false);
     }
@@ -173,7 +177,7 @@ export default function AppDetailPage() {
                     }`}
                   >
                     <span>{category.name}</span>
-                    <span>{categoryCounts[category.id] || 0}</span>
+                    <span>{category?.screens_count || 0}</span>
                   </button>
                 ))}
               </div>

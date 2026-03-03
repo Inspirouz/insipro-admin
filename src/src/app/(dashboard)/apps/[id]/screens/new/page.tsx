@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
-import { apiClient } from '@/lib/api';
 import { fetchTags } from '@/lib/api/tagsApi';
 import { fetchScreensCategories } from '@/lib/api/screensCategoriesApi';
+import { fetchScenarioCategories } from '@/lib/api/scenarioCategoriesApi';
+import { createAdminScreen } from '@/lib/api/adminScreensApi';
 import type { TaxonomyItem, Scenario } from '@/lib/types';
 import { PageHeader } from '@/components/PageHeader';
 import { ImageUploadSlot } from '@/components/ImageUploadSlot';
@@ -18,7 +18,7 @@ function tagToTaxonomy(tag: { id: string; name: string }, type: TaxonomyItem['ty
 
 export default function NewScreenPage() {
   const params = useParams();
-  const router = useRouter();
+  const router = useNavigate();
   const appId = params.id as string;
 
   const [loading, setLoading] = useState(false);
@@ -29,6 +29,7 @@ export default function NewScreenPage() {
 
   const [formData, setFormData] = useState({
     imageUrl: null as string | null,
+    imageId: null as string | null,
     categoryId: '',
     scenarioIds: [] as string[],
     uiElementIds: [] as string[],
@@ -40,11 +41,11 @@ export default function NewScreenPage() {
   }, []);
 
   const loadData = async () => {
-    const [screenCategoriesData, uiData, patternsData, scenariosData] = await Promise.all([
+    const [screenCategoriesData, uiData, patternsData, scenarioCategories] = await Promise.all([
       fetchScreensCategories(),
       fetchTags('ui').then((tags) => tags.map((t) => tagToTaxonomy(t, 'uiElement'))),
       fetchTags('patterns').then((tags) => tags.map((t) => tagToTaxonomy(t, 'pattern'))),
-      apiClient.listScenarios(),
+      fetchScenarioCategories(),
     ]);
     const categoriesData: TaxonomyItem[] = screenCategoriesData.map((c) => ({
       id: c.id,
@@ -54,7 +55,13 @@ export default function NewScreenPage() {
     setScreenCategories(categoriesData);
     setUiElements(uiData);
     setPatterns(patternsData);
-    setScenarios(scenariosData);
+    setScenarios(
+      scenarioCategories.map((c) => ({
+        id: c.id,
+        name: c.name,
+        parentId: (c.parent_id ?? undefined) as string | undefined,
+      }))
+    );
     if (categoriesData.length > 0) {
       setFormData(prev => ({ ...prev, categoryId: categoriesData[0].id }));
     }
@@ -69,15 +76,15 @@ export default function NewScreenPage() {
 
     setLoading(true);
     try {
-      await apiClient.createScreen({
-        appId,
-        imageUrl: formData.imageUrl,
-        categoryId: formData.categoryId,
-        scenarioIds: formData.scenarioIds,
-        uiElementIds: formData.uiElementIds,
-        patternIds: formData.patternIds,
+      await createAdminScreen({
+        project_id: appId,
+        screens_category_id: formData.categoryId,
+        imageIds: formData.imageId ? [formData.imageId] : [],
+        senarys: formData.scenarioIds,
+        ui_elements: formData.uiElementIds,
+        patterns: formData.patternIds,
       });
-      router.push(`/apps/${appId}`);
+      router(`/apps/${appId}`);
     } catch (error) {
       console.error('Failed to create screen:', error);
     } finally {
@@ -87,8 +94,8 @@ export default function NewScreenPage() {
 
   return (
     <div className="p-8">
-      <Link
-        href={`/apps/${appId}`}
+      <Link to={`/apps/${appId}`}
+   
         className="inline-flex items-center gap-2 text-[#a1a1a1] hover:text-white transition-colors mb-6"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -104,6 +111,7 @@ export default function NewScreenPage() {
             <ImageUploadSlot
               value={formData.imageUrl}
               onChange={(url) => setFormData(prev => ({ ...prev, imageUrl: url }))}
+              onUploaded={(meta) => setFormData(prev => ({ ...prev, imageId: meta.id }))}
               label="Изображение экрана"
               aspectRatio="9/16"
             />
@@ -164,7 +172,7 @@ export default function NewScreenPage() {
             {loading ? 'Сохранение...' : 'Сохранить'}
           </button>
           <Link
-            href={`/apps/${appId}`}
+            to={`/apps/${appId}`}
             className="px-6 py-2.5 bg-[#1a1a1a] border border-[#2a2a2a] text-white font-medium rounded-lg hover:bg-[#242424] transition-colors"
           >
             Отмена

@@ -4,6 +4,8 @@ import { ArrowLeft } from 'lucide-react';
 import { apiClient } from '../lib/api';
 import { fetchTags } from '../lib/api/tagsApi';
 import { fetchScreensCategories } from '../lib/api/screensCategoriesApi';
+import { fetchScenarioCategories } from '../lib/api/scenarioCategoriesApi';
+import { createAdminScreen } from '../lib/api/adminScreensApi';
 import type { TaxonomyItem, Scenario } from '../lib/types';
 import { PageHeader } from '../components/PageHeader';
 import { ImageUploadSlot } from '../components/ImageUploadSlot';
@@ -25,6 +27,7 @@ export function NewScreenPage() {
 
   const [formData, setFormData] = useState({
     imageUrl: null as string | null,
+    imageId: null as string | null,
     categoryId: '',
     scenarioIds: [] as string[],
     uiElementIds: [] as string[],
@@ -36,11 +39,11 @@ export function NewScreenPage() {
   }, []);
 
   const loadData = async () => {
-    const [screenCategoriesData, uiData, patternsData, scenariosData] = await Promise.all([
+    const [screenCategoriesData, uiData, patternsData, scenarioCategories] = await Promise.all([
       fetchScreensCategories(),
       fetchTags('ui').then((tags) => tags.map((t) => tagToTaxonomy(t, 'uiElement'))),
       fetchTags('patterns').then((tags) => tags.map((t) => tagToTaxonomy(t, 'pattern'))),
-      apiClient.listScenarios(),
+      fetchScenarioCategories(),
     ]);
     const categoriesData: TaxonomyItem[] = screenCategoriesData.map((c) => ({
       id: c.id,
@@ -50,7 +53,13 @@ export function NewScreenPage() {
     setScreenCategories(categoriesData);
     setUiElements(uiData);
     setPatterns(patternsData);
-    setScenarios(scenariosData);
+    setScenarios(
+      scenarioCategories.map((c) => ({
+        id: c.id,
+        name: c.name,
+        parentId: (c.parent_id ?? undefined) as string | undefined,
+      }))
+    );
     if (categoriesData.length > 0) {
       setFormData(prev => ({ ...prev, categoryId: categoriesData[0].id }));
     }
@@ -66,13 +75,13 @@ export function NewScreenPage() {
 
     setLoading(true);
     try {
-      await apiClient.createScreen({
-        appId,
-        imageUrl: formData.imageUrl,
-        categoryId: formData.categoryId,
-        scenarioIds: formData.scenarioIds,
-        uiElementIds: formData.uiElementIds,
-        patternIds: formData.patternIds,
+      await createAdminScreen({
+        project_id: appId,
+        screens_category_id: formData.categoryId,
+        imageIds: formData.imageId ? [formData.imageId] : [],
+        senarys: formData.scenarioIds,
+        ui_elements: formData.uiElementIds,
+        patterns: formData.patternIds,
       });
       navigate(`/apps/${appId}`);
     } catch (error) {
@@ -101,6 +110,7 @@ export function NewScreenPage() {
             <ImageUploadSlot
               value={formData.imageUrl}
               onChange={(url) => setFormData(prev => ({ ...prev, imageUrl: url }))}
+              onUploaded={(meta) => setFormData(prev => ({ ...prev, imageId: meta.id }))}
               label="Изображение экрана"
               aspectRatio="9/16"
             />

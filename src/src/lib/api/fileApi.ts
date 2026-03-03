@@ -28,9 +28,10 @@ function fileUploadHeaders(): HeadersInit {
 
 /** Response: { url: string } or { data: { url: string } } or { path: string } */
 interface FileUploadResponse {
+  id?: string;
   url?: string;
   path?: string;
-  data?: { url?: string; path?: string };
+  data?: { id?: string; url?: string; path?: string };
   message?: string;
 }
 
@@ -66,6 +67,45 @@ export async function uploadFile(file: File): Promise<string> {
     throw new Error('No URL in upload response');
   }
   return url.trim();
+}
+
+export interface UploadedFileMeta {
+  id: string | null;
+  url: string;
+}
+
+/**
+ * Helper when both file UUID (id) and path/url are needed.
+ */
+export async function uploadFileWithMeta(file: File): Promise<UploadedFileMeta> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const res = await fetch(fileUploadUrl(), {
+    method: 'POST',
+    headers: fileUploadHeaders(),
+    body: formData,
+  });
+
+  const json: FileUploadResponse = await res.json();
+
+  if (!res.ok) {
+    const msg = typeof json.message === 'string' ? json.message : `Upload failed: ${res.status}`;
+    throw new Error(msg);
+  }
+
+  const url =
+    json.url ??
+    json.path ??
+    json.data?.url ??
+    json.data?.path ??
+    '';
+  if (typeof url !== 'string' || !url.trim()) {
+    throw new Error('No URL in upload response');
+  }
+
+  const id = json.id ?? json.data?.id ?? null;
+  return { id: id ?? null, url: url.trim() };
 }
 
 /**

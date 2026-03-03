@@ -223,7 +223,7 @@ export function AdminsPage() {
       {formOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-transparent" onClick={() => !saving && setFormOpen(false)} aria-hidden />
-          <div className="relative w-full max-w-md bg-bg-secondary border border-border rounded-xl shadow-soft-lg p-6">
+          <div className="relative w-full max-w-md bg-[#141414] border border-border rounded-xl shadow-soft-lg p-6" style={{ backgroundColor: '#141414' }}>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-medium">
                 {editingItem ? 'Редактировать администратора' : 'Добавить администратора'}
