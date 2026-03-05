@@ -1,38 +1,208 @@
-import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Pencil, Plus } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
+import { ArrowLeft, Pencil, Plus, Trash2 } from 'lucide-react';
 import { fetchProject } from '../lib/api/projectsApi';
 import { fetchScreensCategories } from '../lib/api/screensCategoriesApi';
+import { fetchScenarioCategories, deleteScenarioCategory, type ScenarioCategoryItem } from '../lib/api/scenarioCategoriesApi';
 import { fetchAdminScreens } from '../lib/api/adminScreensApi';
+import { fetchAdminScenariosByProject, type ScenarioCategoryWithScenarios } from '../lib/api/scenariosApi';
+import { getProjectImageUrl } from '../lib/api/projectsApi';
+import { AddScenarioCategoryModal } from '../components/AddScenarioCategoryModal';
+import { AddScenarioModal } from '../components/AddScenarioModal';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import type { App, Screen, TaxonomyItem } from '../lib/types';
+
+type ScenarioCategoryFlat = { id: string; name: string; parent_id?: string | null; scenarios_count?: number };
+type ScenarioCategoryNode = { id: string; name: string; children: ScenarioCategoryNode[]; scenarios_count?: number };
+
+function buildScenarioTree(items: ScenarioCategoryFlat[]): ScenarioCategoryNode[] {
+  const byId = new Map<string, ScenarioCategoryNode>();
+  items.forEach((item) => byId.set(item.id, { id: item.id, name: item.name, children: [], scenarios_count: item.scenarios_count }));
+  const roots: ScenarioCategoryNode[] = [];
+  items.forEach((item) => {
+    const node = byId.get(item.id)!;
+    const parentId = item.parent_id ?? null;
+    if (parentId && byId.has(parentId)) {
+      byId.get(parentId)!.children.push(node);
+    } else {
+      roots.push(node);
+    }
+  });
+  return roots;
+}
+
+function ScenarioCategoryTreeItem({
+  node,
+  depth,
+  selectedId,
+  onSelect,
+  onAddChild,
+  onEdit,
+  onDelete,
+}: {
+  node: ScenarioCategoryNode;
+  depth: number;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  onAddChild: (id: string, name: string) => void;
+  onEdit: (id: string) => void;
+  onDelete: (id: string) => void;
+  isLast?: boolean;
+}) {
+  const isSelected = selectedId === node.id;
+  const hasChildren = node.children.length > 0;
+  const count = node.scenarios_count ?? 0;
+
+  return (
+    <div className="py-0.5">
+      <div
+        style={{ paddingLeft: depth > 0 ? 12 + depth * 16 : 0 }}
+        className={`flex items-center rounded-md text-sm ${
+          isSelected ? 'bg-[#a3e635] text-black font-medium' : 'text-[#e5e5e5] hover:bg-[#1f1f1f]'
+        }`}
+      >
+     
+        <button
+          type="button"
+          onClick={() => onSelect(node.id)}
+          className={`flex-1 min-w-0 flex items-center gap-2 px-2 py-1.5 rounded-md text-left transition-colors ${
+            isSelected ? 'hover:bg-[#b8ec44]/80' : ''
+          }`}
+        >
+          <span className="truncate">{node.name}</span>
+          <span className={`flex-shrink-0 text-xs tabular-nums ${isSelected ? 'text-black/80' : 'text-[#a1a1a1]'}`}>
+            {count}
+          </span>
+        </button>
+        <div className="flex items-center gap-0.5 flex-shrink-0 pr-1">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onEdit(node.id); }}
+            className="p-1 rounded hover:bg-black/20 transition-colors"
+            title="Редактировать"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+          {depth < 2 && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onAddChild(node.id, node.name); }}
+              className="p-1 rounded hover:bg-black/20 transition-colors"
+              title="Добавить подкатегорию"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onDelete(node.id); }}
+            className="p-1 rounded hover:bg-red-500/20 text-red-400 transition-colors"
+            title="Удалить"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {hasChildren && (
+        <div className="border-l border-[#404040] ml-2 pl-2 mt-0.5 space-y-0.5">
+          {node.children.map((child) => (
+            <ScenarioCategoryTreeItem
+              key={child.id}
+              node={child}
+              depth={depth + 1}
+              selectedId={selectedId}
+              onSelect={onSelect}
+              onAddChild={onAddChild}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const TAB_VALUES = ['screens', 'scenarios', 'videos'] as const;
+type TabId = (typeof TAB_VALUES)[number];
+
+function getTabFromSearchParams(searchParams: URLSearchParams): TabId {
+  const t = searchParams.get('tab');
+  return (TAB_VALUES.includes(t as TabId) ? t : 'screens') as TabId;
+}
 
 export function AppDetailPage() {
   const { id: appId } = useParams<{ id: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const activeTab = getTabFromSearchParams(searchParams);
+  const setActiveTab = (tab: TabId) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('tab', tab);
+      return next;
+    });
+  };
 
   const [app, setApp] = useState<App | null>(null);
   const [screens, setScreens] = useState<Screen[]>([]);
   const [screenCategories, setScreenCategories] = useState<TaxonomyItem[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'screens' | 'scenarios' | 'videos'>('screens');
+  const [scenarioCategoriesRaw, setScenarioCategoriesRaw] = useState<ScenarioCategoryItem[]>([]);
+  const [scenarioCategoryFilter, setScenarioCategoryFilter] = useState<string | null>(null);
+  const [scenarioCategoryModalOpen, setScenarioCategoryModalOpen] = useState(false);
+  const [scenarioCategoryParentId, setScenarioCategoryParentId] = useState<string | null>(null);
+  const [scenarioCategoryParentName, setScenarioCategoryParentName] = useState<string>('');
+  const [editingScenarioCategoryId, setEditingScenarioCategoryId] = useState<string | null>(null);
+  const [deleteScenarioCategoryId, setDeleteScenarioCategoryId] = useState<string | null>(null);
+  const [deletingScenarioCategory, setDeletingScenarioCategory] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [scenariosList, setScenariosList] = useState<ScenarioCategoryWithScenarios[]>([]);
+  const [scenariosLoading, setScenariosLoading] = useState(false);
+  const [scenarioModalOpen, setScenarioModalOpen] = useState(false);
+  const [scenarioModalCategoryId, setScenarioModalCategoryId] = useState<string | null>(null);
+  const scenarioSectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     if (appId) loadData();
   }, [appId]);
 
+  useEffect(() => {
+    if (activeTab === 'scenarios' && scenarioCategoryFilter) {
+      const el = scenarioSectionRefs.current[scenarioCategoryFilter];
+      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [activeTab, scenarioCategoryFilter]);
+
+  useEffect(() => {
+    if (activeTab === 'scenarios' && appId) {
+      setScenariosLoading(true);
+      fetchAdminScenariosByProject(appId)
+        .then(setScenariosList)
+        .catch((e) => {
+          console.error(e);
+          setScenariosList([]);
+        })
+        .finally(() => setScenariosLoading(false));
+    }
+  }, [activeTab, appId]);
+
   const loadData = async () => {
     if (!appId) return;
     try {
-      const [appData, screensData, categoriesData] = await Promise.all([
+      const [appData, screensData, categoriesData, scenarioCategoriesData] = await Promise.all([
         fetchProject(appId),
         fetchAdminScreens(appId),
         fetchScreensCategories(undefined, appId),
+        fetchScenarioCategories(undefined, appId),
       ]);
       setApp(appData ?? null);
       setScreens(screensData);
       setScreenCategories(
         categoriesData.map((c) => ({ id: c.id, name: c.name, type: 'screenCategory' as const }))
       );
+      setScenarioCategoriesRaw(scenarioCategoriesData);
     } finally {
       setLoading(false);
     }
@@ -53,6 +223,56 @@ export function AppDetailPage() {
   const filteredScreens = categoryFilter
     ? screens.filter(s => s.categoryId === categoryFilter)
     : screens;
+
+  const scenarioCategoriesFlat = useMemo(
+    () =>
+      scenarioCategoriesRaw.map((c) => ({
+        id: c.id,
+        name: c.name,
+        parent_id: c.parent_id ?? null,
+        scenarios_count: c.scenarios_count,
+      })),
+    [scenarioCategoriesRaw]
+  );
+
+  const scenarioCategoryTree = useMemo(
+    () => buildScenarioTree(scenarioCategoriesFlat),
+    [scenarioCategoriesFlat]
+  );
+
+  const refetchScenarioCategories = async () => {
+    if (!appId) return;
+    try {
+      const data = await fetchScenarioCategories(undefined, appId);
+      setScenarioCategoriesRaw(data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const refetchScenarios = async () => {
+    if (!appId) return;
+    try {
+      const data = await fetchAdminScenariosByProject(appId);
+      setScenariosList(data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDeleteScenarioCategoryConfirm = async () => {
+    if (!deleteScenarioCategoryId) return;
+    setDeletingScenarioCategory(true);
+    try {
+      await deleteScenarioCategory(deleteScenarioCategoryId);
+      setDeleteScenarioCategoryId(null);
+      await refetchScenarioCategories();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setDeletingScenarioCategory(false);
+    }
+  };
 
   if (loading) {
     return <div className="p-8 text-center text-[#a1a1a1]">Загрузка...</div>;
@@ -124,7 +344,7 @@ export function AppDetailPage() {
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id as TabId)}
               className={`px-1 py-3 font-medium transition-colors relative ${
                 activeTab === tab.id
                   ? 'text-[#a3e635]'
@@ -238,8 +458,115 @@ export function AppDetailPage() {
 
       {/* Scenarios Tab */}
       {activeTab === 'scenarios' && (
-        <div className="text-center py-12 text-[#a1a1a1]">
-          Сценарии (в разработке)
+        <div className="flex flex-nowrap gap-4 w-full max-w-5xl items-start">
+          <div className="w-1/3 flex-shrink-0 min-w-0">
+            <div className="sticky overflow-y-auto rounded-xl border border-[#2a2a2a] bg-[#141414] p-4" style={{ top: 20, maxHeight: 'calc(100vh - 40px)' }}>
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <h3 className="font-medium">Категории сценариев</h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setScenarioCategoryParentId(null);
+                  setScenarioCategoryParentName('');
+                  setEditingScenarioCategoryId(null);
+                  setScenarioCategoryModalOpen(true);
+                }}
+                className="flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg bg-[#a3e635] text-black text-sm font-medium hover:bg-[#b8ec44] transition-colors flex-shrink-0"
+                title="Добавить категорию"
+              >
+                <Plus className="h-4 w-4" />
+                Добавить
+              </button>
+            </div>
+            <div className="space-y-0.5 mb-4">
+              {scenarioCategoryTree.map((node) => (
+                <ScenarioCategoryTreeItem
+                  key={node.id}
+                  node={node}
+                  depth={0}
+                  selectedId={scenarioCategoryFilter}
+                  onSelect={setScenarioCategoryFilter}
+                  onAddChild={(id, name) => {
+                    setScenarioCategoryParentId(id);
+                    setScenarioCategoryParentName(name);
+                    setEditingScenarioCategoryId(null);
+                    setScenarioCategoryModalOpen(true);
+                  }}
+                  onEdit={(id) => {
+                    setEditingScenarioCategoryId(id);
+                    setScenarioCategoryParentId(null);
+                    setScenarioCategoryParentName('');
+                    setScenarioCategoryModalOpen(true);
+                  }}
+                  onDelete={setDeleteScenarioCategoryId}
+                />
+              ))}
+            </div>
+            </div>
+          </div>
+
+          <div className="flex-1 min-w-0 bg-[#141414] border border-[#2a2a2a] rounded-xl box-border" style={{ padding: '1.25rem' }}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">Scenarios</h3>
+              
+            </div>
+            {scenariosLoading ? (
+              <p className="text-[#a1a1a1] text-sm py-8">Загрузка...</p>
+            ) : scenariosList.length === 0 ? (
+              <p className="text-[#a1a1a1] text-sm py-8">Нет данных</p>
+            ) : (
+              <div className="space-y-8 max-h-[calc(100vh-12rem)] overflow-auto box-border" style={{ paddingRight: '0.5rem' }}>
+                {scenariosList.map((cat) => {
+                  const title = cat.tag?.name ?? '—';
+                  const allImages = (cat.scenarios ?? []).flatMap((s) => s.images ?? []);
+                  const count = allImages.length;
+                  return (
+                    <div
+                      key={cat.id}
+                      ref={(el) => { scenarioSectionRefs.current[cat.id] = el; }}
+                      className="rounded-xl bg-[#1a1a1a] border border-[#2a2a2a] box-border"
+                      style={{ padding: '1rem' }}
+                    >
+                      <div className="flex items-center justify-between gap-3 mb-3">
+                        <div className="min-w-0">
+                          <h4 className="text-sm font-semibold text-white truncate">{title}</h4>
+                          <p className="text-xs text-[#737373] mt-0.5">
+                            {count} {count === 1 ? 'экран' : count < 5 ? 'экрана' : 'экранов'}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => { setScenarioModalCategoryId(cat.id); setScenarioModalOpen(true); }}
+                           className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#a3e635] text-black text-sm font-medium hover:bg-[#b8ec44] transition-colors"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          Create
+                        </button>
+                      </div>
+                      {allImages.length === 0 ? (
+                        <p className="text-[#737373] text-xs py-6 text-center">Нет изображений</p>
+                      ) : (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                          {allImages.map((img) => (
+                            <div
+                              key={img.id}
+                              className="w-full max-w-[180px] h-[320px] rounded-xl overflow-hidden bg-[#0d0d0d] border border-[#262626] hover:border-[#404040] transition-colors mx-auto"
+                            >
+                              <img
+                                src={getProjectImageUrl(img.path)}
+                                alt={img.file_name ?? ''}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -249,6 +576,43 @@ export function AppDetailPage() {
           Soon
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={!!deleteScenarioCategoryId}
+        onClose={() => setDeleteScenarioCategoryId(null)}
+        onConfirm={handleDeleteScenarioCategoryConfirm}
+        title="Удалить категорию?"
+        description="Вы уверены, что хотите удалить эту категорию сценариев? Это действие нельзя отменить."
+        confirmLabel="Удалить"
+        cancelLabel="Отмена"
+        variant="danger"
+        loading={deletingScenarioCategory}
+      />
+
+      <AddScenarioCategoryModal
+        isOpen={scenarioCategoryModalOpen}
+        onClose={() => {
+          setScenarioCategoryModalOpen(false);
+          setScenarioCategoryParentId(null);
+          setScenarioCategoryParentName('');
+          setEditingScenarioCategoryId(null);
+        }}
+        projectId={appId ?? ''}
+        parentId={scenarioCategoryParentId}
+        parentName={scenarioCategoryParentName}
+        editId={editingScenarioCategoryId}
+        initialTagId={editingScenarioCategoryId ? scenarioCategoriesRaw.find((c) => c.id === editingScenarioCategoryId)?.tag_id : undefined}
+        onSuccess={refetchScenarioCategories}
+      />
+
+      <AddScenarioModal
+        isOpen={scenarioModalOpen}
+        onClose={() => { setScenarioModalOpen(false); setScenarioModalCategoryId(null); }}
+        projectId={appId ?? ''}
+        scenarioCategories={scenarioCategoriesRaw.map((c) => ({ id: c.id, name: c.name }))}
+        onSuccess={refetchScenarios}
+        initialScenarioCategoryId={scenarioModalCategoryId}
+      />
     </div>
   );
 }

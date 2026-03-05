@@ -47,6 +47,17 @@ export function clearToken() {
   }
 }
 
+export function handleUnauthorizedStatus(status: number) {
+  if (status === 401 && typeof window !== 'undefined') {
+    clearToken();
+    try {
+      window.location.href = '/login';
+    } catch {
+      // ignore navigation errors
+    }
+  }
+}
+
 export function isAuthenticated(): boolean {
   return !!getToken();
 }

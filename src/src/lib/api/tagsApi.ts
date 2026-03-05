@@ -1,4 +1,4 @@
-import { getToken } from '../auth';
+import { getToken, handleUnauthorizedStatus } from '../auth';
 
 const getApiBase = (): string => {
   try {
@@ -50,6 +50,7 @@ export async function fetchTags(type?: string, search?: string): Promise<TagItem
   const url = query ? `${baseUrl}?${query}` : baseUrl;
 
   const res = await fetch(url, { method: 'GET', headers: tagsHeaders() });
+  handleUnauthorizedStatus(res.status);
   const json: ListResponse | TagItem[] = await res.json();
 
   if (!res.ok) {

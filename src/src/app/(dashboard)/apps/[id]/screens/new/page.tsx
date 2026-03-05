@@ -5,7 +5,6 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { fetchTags } from '@/lib/api/tagsApi';
 import { fetchScreensCategories } from '@/lib/api/screensCategoriesApi';
-import { fetchScenarioCategories } from '@/lib/api/scenarioCategoriesApi';
 import { createAdminScreen } from '@/lib/api/adminScreensApi';
 import type { TaxonomyItem, Scenario } from '@/lib/types';
 import { PageHeader } from '@/components/PageHeader';
@@ -45,7 +44,7 @@ export default function NewScreenPage() {
       fetchScreensCategories(),
       fetchTags('ui').then((tags) => tags.map((t) => tagToTaxonomy(t, 'uiElement'))),
       fetchTags('patterns').then((tags) => tags.map((t) => tagToTaxonomy(t, 'pattern'))),
-      fetchScenarioCategories(),
+      fetchTags('senary-category'),
     ]);
     const categoriesData: TaxonomyItem[] = screenCategoriesData.map((c) => ({
       id: c.id,
@@ -59,7 +58,7 @@ export default function NewScreenPage() {
       scenarioCategories.map((c) => ({
         id: c.id,
         name: c.name,
-        parentId: (c.parent_id ?? undefined) as string | undefined,
+        parentId: undefined,
       }))
     );
     if (categoriesData.length > 0) {

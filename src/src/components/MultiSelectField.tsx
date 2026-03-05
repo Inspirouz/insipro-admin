@@ -19,7 +19,7 @@ export function MultiSelectField({ label, items, selectedIds, onChange }: MultiS
 
   const selectedItems = items.filter(item => selectedIds.includes(item.id));
   const filteredItems = items.filter(item =>
-    item.name.toLowerCase().includes(search.toLowerCase())
+    (item.name ?? '').toLowerCase().includes(search.toLowerCase())
   );
 
   const toggleItem = (id: string) => {
@@ -47,7 +47,7 @@ export function MultiSelectField({ label, items, selectedIds, onChange }: MultiS
               key={item.id}
               className="inline-flex items-center gap-1 px-2 py-1 bg-[#1a1a1a] border border-[#2a2a2a] rounded-md text-sm"
             >
-              {item.name}
+              {item.name ?? ''}
               <button
                 onClick={(e) => removeItem(item.id, e)}
                 className="hover:text-red-400 transition-colors"
@@ -109,7 +109,7 @@ export function MultiSelectField({ label, items, selectedIds, onChange }: MultiS
                         <Check className="h-3 w-3 text-black" />
                       )}
                     </div>
-                    <span>{item.name}</span>
+                    <span>{item.name ?? ''}</span>
                   </button>
                 ))}
                 {filteredItems.length === 0 && (

@@ -1,4 +1,4 @@
-import { getToken } from '../auth';
+import { getToken, handleUnauthorizedStatus } from '../auth';
 
 const getApiBase = (): string => {
   try {
@@ -50,6 +50,8 @@ export async function uploadFile(file: File): Promise<string> {
     body: formData,
   });
 
+  handleUnauthorizedStatus(res.status);
+
   const json: FileUploadResponse = await res.json();
 
   if (!res.ok) {
@@ -87,6 +89,8 @@ export async function uploadFileWithMeta(file: File): Promise<UploadedFileMeta> 
     body: formData,
   });
 
+  handleUnauthorizedStatus(res.status);
+
   const json: FileUploadResponse = await res.json();
 
   if (!res.ok) {
@@ -117,6 +121,8 @@ export async function deleteFile(id: string): Promise<void> {
     method: 'DELETE',
     headers: fileUploadHeaders(),
   });
+
+  handleUnauthorizedStatus(res.status);
 
   if (!res.ok) {
     let msg = `Delete failed: ${res.status}`;
