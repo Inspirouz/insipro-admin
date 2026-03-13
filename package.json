@@ -6,7 +6,7 @@
       "scripts": {
         "dev": "vite --port 4001",
         "build": "vite build",
-        "preview": "vite preview"
+        "preview": "vite preview  --port 4001"
       },
       "dependencies": {
         "@radix-ui/react-accordion": "^1.2.3",
