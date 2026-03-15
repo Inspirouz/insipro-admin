@@ -54,8 +54,16 @@
    
         outDir: "dist"
         },
+
+
     server: {
-      port: 3000,
+      port: 4001,
       open: true,
-    },
+      host: 'localhost'
+    },  
+  preview:{
+  allowedHosts:['admin.inspiro.uz'],
+  port:4001
+  
+  },
   });
