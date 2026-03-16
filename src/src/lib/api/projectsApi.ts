@@ -10,11 +10,19 @@ const getApiBase = (): string => {
   }
 };
 
-/** Base URL for project images: https://dev.api.inspiro.uz/images/{path} */
 const getProjectImageBase = (): string => {
   try {
-    const env = (import.meta as { env?: { VITE_PROJECTS_IMAGE_BASE?: string } }).env;
-    return env?.VITE_PROJECTS_IMAGE_BASE ?? 'https://dev.api.inspiro.uz/images';
+    const env = (import.meta as { env?: { VITE_API_URL?: string } }).env;
+    const apiBase = (env?.VITE_API_URL ?? '').trim();
+    if (apiBase) {
+      // Example: https://dev.api.inspiro.uz/api -> https://dev.api.inspiro.uz/images
+      const urlWithoutTrailingSlash = apiBase.replace(/\/+$/, '');
+      const withoutApiSuffix = urlWithoutTrailingSlash.replace(/\/api$/, '');
+      const originBase = withoutApiSuffix || urlWithoutTrailingSlash;
+      const normalizedOrigin = originBase.replace(/\/+$/, '');
+      return `${normalizedOrigin}/images`;
+    }
+    return 'https://dev.api.inspiro.uz/images';
   } catch {
     return 'https://dev.api.inspiro.uz/images';
   }
