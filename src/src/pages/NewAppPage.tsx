@@ -99,8 +99,8 @@ export function NewAppPage() {
           </div>
 
           {/* Logo + main info */}
-          <div className="grid gap-6 md:grid-cols-[minmax(0,220px)_minmax(0,1fr)] items-stretch">
-            <div className="flex md:block">
+          <div className="grid gap-6 md:grid-cols-[minmax(0,220px)_minmax(0,1fr)] items-stretch mb-4">
+            <div className="flex md:block w-24">
               <ImageUploadSlot
                 value={formData.iconUrl}
                 onChange={(url) => setFormData(prev => ({ ...prev, iconUrl: url }))}
@@ -141,8 +141,8 @@ export function NewAppPage() {
           </div>
 
           {/* Category */}
-          <div className="space-y-4">
-            <label htmlFor="category" className="block text-sm font-medium">
+          <div className="space-y-4 mb-4 ">
+            <label htmlFor="category" className="block text-sm font-medium mb-2">
               Категория
             </label>
             <select
@@ -162,7 +162,7 @@ export function NewAppPage() {
 
           {/* Platforms */}
           <div className="space-y-4">
-            <label className="block text-sm font-medium">Платформа</label>
+            <label className="block text-sm font-medium mb-2">Платформа</label>
             <div className="inline-flex w-full items-center justify-between rounded-full bg-[#141414] border border-[#2a2a2a] px-2 py-1">
               {(['ios', 'android', 'web'] as const).map((platform) => {
                 const active = formData.platforms.includes(platform);

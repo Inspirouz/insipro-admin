@@ -114,6 +114,7 @@ export async function fetchAdminScreens(projectId: string): Promise<Screen[]> {
       id: s.id,
       appId: projectId,
       imageUrl: typeof imageUrl === 'string' ? (imageUrl.startsWith('http') ? imageUrl : getProjectImageUrl(imageUrl)) : '',
+      imageIds: Array.isArray(s.image_ids) ? s.image_ids : [],
       categoryId: s.screens_category_id ?? '',
       scenarioIds,
       uiElementIds,
@@ -121,6 +122,93 @@ export async function fetchAdminScreens(projectId: string): Promise<Screen[]> {
       createdAt: s.created_at ? new Date(s.created_at) : new Date(),
     };
   });
+}
+
+/**
+ * GET /api/admin/screens/:id
+ */
+export async function fetchAdminScreen(id: string): Promise<Screen> {
+  const url = `${screensUrl()}/${encodeURIComponent(id)}`;
+  const res = await fetch(url, { method: 'GET', headers: headers() });
+  const json = (await res.json()) as { data?: ApiScreenItem; message?: string } & ApiScreenItem;
+
+  if (!res.ok) {
+    const msg = typeof json.message === 'string' ? json.message : `Request failed: ${res.status}`;
+    throw new Error(msg);
+  }
+
+  const s: ApiScreenItem = json.data ?? (json.id ? json : { id });
+  const imageUrl =
+    s.image_url ??
+    s.image ??
+    (Array.isArray(s.images) && s.images[0]
+      ? (s.images[0].url ?? (s.images[0].path ? getProjectImageUrl(s.images[0].path) : ''))
+      : '');
+
+  const toIds = (arr: Array<{ id: string } | string> | undefined): string[] =>
+    (arr ?? []).map((v) => (typeof v === 'string' ? v : v.id)).filter(Boolean);
+
+  return {
+    id: s.id,
+    appId: s.project_id ?? '',
+    imageUrl: typeof imageUrl === 'string' ? (imageUrl.startsWith('http') ? imageUrl : getProjectImageUrl(imageUrl)) : '',
+    imageIds: Array.isArray(s.image_ids) ? s.image_ids : [],
+    categoryId: s.screens_category_id ?? '',
+    scenarioIds: toIds(s.senarys as Array<{ id: string } | string> | undefined),
+    uiElementIds: toIds(s.ui_elements as Array<{ id: string } | string> | undefined),
+    patternIds: toIds(s.patterns as Array<{ id: string } | string> | undefined),
+    createdAt: s.created_at ? new Date(s.created_at) : new Date(),
+  };
+}
+
+export interface UpdateAdminScreenBody {
+  screens_category_id?: string;
+  imageIds?: string[];
+  senarys?: string[];
+  ui_elements?: string[];
+  patterns?: string[];
+}
+
+/**
+ * PATCH /api/admin/screens/:id
+ */
+export async function updateAdminScreen(id: string, body: UpdateAdminScreenBody): Promise<void> {
+  const url = `${screensUrl()}/${encodeURIComponent(id)}`;
+  const res = await fetch(url, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    let msg = `Request failed: ${res.status}`;
+    try {
+      const json = (await res.json()) as { message?: string };
+      if (typeof json.message === 'string') msg = json.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(msg);
+  }
+}
+
+/**
+ * DELETE /api/admin/screens/:id
+ */
+export async function deleteAdminScreen(id: string): Promise<void> {
+  const url = `${screensUrl()}/${encodeURIComponent(id)}`;
+  const res = await fetch(url, { method: 'DELETE', headers: headers() });
+
+  if (!res.ok) {
+    let msg = `Request failed: ${res.status}`;
+    try {
+      const json = (await res.json()) as { message?: string };
+      if (typeof json.message === 'string') msg = json.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(msg);
+  }
 }
 
 /**

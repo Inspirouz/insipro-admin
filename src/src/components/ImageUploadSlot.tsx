@@ -61,7 +61,7 @@ export function ImageUploadSlot({ value, onChange, fileId, label, aspectRatio = 
       {label && <label className="text-sm font-medium">{label}</label>}
       <div
         onClick={() => !uploading && !removing && inputRef.current?.click()}
-        className={`relative bg-[#1a1a1a] border-2 border-dashed border-[#2a2a2a] rounded-lg overflow-hidden transition-colors group ${uploading || removing ? 'cursor-wait opacity-70' : 'cursor-pointer hover:border-[#3a3a3a]'}`}
+        className={`w-[100px] h-[100px] relative bg-[#1a1a1a] border-2 border-dashed border-[#2a2a2a] rounded-lg overflow-hidden transition-colors group ${uploading || removing ? 'cursor-wait opacity-70' : 'cursor-pointer hover:border-[#3a3a3a]'}`}
         style={{ aspectRatio }}
       >
         {uploading || removing ? (
