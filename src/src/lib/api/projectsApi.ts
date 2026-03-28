@@ -34,6 +34,8 @@ export function getProjectImageUrl(path: string | null | undefined): string {
   const trimmed = path.trim();
   if (!trimmed) return '';
   if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
+  // Handle malformed URLs with single slash (e.g. "https:/example.com/...")
+  if (/^https?:\/[^/]/.test(trimmed)) return trimmed.replace(/^(https?:)\/([^/])/, '$1//$2');
   const base = getProjectImageBase().replace(/\/$/, '');
   return `${base}/${trimmed.replace(/^\//, '')}`;
 }

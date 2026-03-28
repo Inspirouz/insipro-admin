@@ -56,7 +56,7 @@
         },
         server: {
           port: 4000,
-          open: true,
+          // open: true,
           host: 'localhost'
         },  
       preview:{

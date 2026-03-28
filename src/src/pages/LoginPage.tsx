@@ -79,9 +79,9 @@ export function LoginPage() {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-text-tertiary">
+          {/* <p className="mt-6 text-center text-sm text-text-tertiary">
             Masalan: john_doe / john_doe
-          </p>
+          </p> */}
         </div>
       </div>
     </div>

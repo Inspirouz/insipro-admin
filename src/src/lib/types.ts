@@ -15,6 +15,7 @@ export interface Screen {
   id: string;
   appId: string;
   imageUrl: string;
+  imageIds: string[];
   categoryId: string;
   scenarioIds: string[];
   uiElementIds: string[];

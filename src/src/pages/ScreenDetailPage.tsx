@@ -1,11 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Trash2 } from 'lucide-react';
-import { apiClient } from '../lib/api';
-import type { Screen, TaxonomyItem, Scenario } from '../lib/types';
+import { fetchTags } from '../lib/api/tagsApi';
+import { fetchScreensCategories } from '../lib/api/screensCategoriesApi';
+import { fetchAdminScreen, updateAdminScreen, deleteAdminScreen } from '../lib/api/adminScreensApi';
+import type { TaxonomyItem, Scenario } from '../lib/types';
 import { PageHeader } from '../components/PageHeader';
 import { MultiSelectField } from '../components/MultiSelectField';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { ImageUploadSlot } from '../components/ImageUploadSlot';
+import { Toast } from '../components/Toast';
+
+function tagToTaxonomy(tag: { id: string; name: string }, type: TaxonomyItem['type']): TaxonomyItem {
+  return { id: tag.id, name: tag.name, type };
+}
 
 export function ScreenDetailPage() {
   const { id: screenId } = useParams<{ id: string }>();
@@ -15,7 +23,10 @@ export function ScreenDetailPage() {
   const [saving, setSaving] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [screen, setScreen] = useState<Screen | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [imageUrl, setImageUrl] = useState('');
+  const [imageIds, setImageIds] = useState<string[]>([]);
+  const [appId, setAppId] = useState('');
   const [screenCategories, setScreenCategories] = useState<TaxonomyItem[]>([]);
   const [uiElements, setUiElements] = useState<TaxonomyItem[]>([]);
   const [patterns, setPatterns] = useState<TaxonomyItem[]>([]);
@@ -35,32 +46,33 @@ export function ScreenDetailPage() {
   const loadData = async () => {
     if (!screenId) return;
     try {
-      const [
-        screenData,
-        categoriesData,
-        uiData,
-        patternsData,
-        scenariosData
-      ] = await Promise.all([
-        apiClient.getScreen(screenId),
-        apiClient.listTaxonomy('screenCategory'),
-        apiClient.listTaxonomy('uiElement'),
-        apiClient.listTaxonomy('pattern'),
-        apiClient.listScenarios(),
+      const [screen, screenCategoriesData, uiData, patternsData, scenarioCategories] = await Promise.all([
+        fetchAdminScreen(screenId),
+        fetchScreensCategories(),
+        fetchTags('ui').then((tags) => tags.map((t) => tagToTaxonomy(t, 'uiElement'))),
+        fetchTags('patterns').then((tags) => tags.map((t) => tagToTaxonomy(t, 'pattern'))),
+        fetchTags('senary-category'),
       ]);
-      
-      setScreen(screenData);
-      setScreenCategories(categoriesData);
+
+      setImageUrl(screen.imageUrl);
+      setImageIds(screen.imageIds ?? []);
+      setAppId(screen.appId);
+      setScreenCategories(
+        screenCategoriesData.map((c) => ({ id: c.id, name: c.name, type: 'screenCategory' as const }))
+      );
       setUiElements(uiData);
       setPatterns(patternsData);
-      setScenarios(scenariosData);
-      
+      setScenarios(
+        scenarioCategories.map((c) => ({ id: c.id, name: c.name, parentId: undefined }))
+      );
       setFormData({
-        categoryId: screenData.categoryId,
-        scenarioIds: screenData.scenarioIds,
-        uiElementIds: screenData.uiElementIds,
-        patternIds: screenData.patternIds,
+        categoryId: screen.categoryId,
+        scenarioIds: screen.scenarioIds,
+        uiElementIds: screen.uiElementIds,
+        patternIds: screen.patternIds,
       });
+    } catch (e) {
+      console.error(e);
     } finally {
       setLoading(false);
     }
@@ -70,10 +82,18 @@ export function ScreenDetailPage() {
     if (!screenId) return;
     setSaving(true);
     try {
-      await apiClient.updateScreen(screenId, formData);
-      alert('Изменения сохранены');
+      await updateAdminScreen(screenId, {
+        screens_category_id: formData.categoryId,
+        ...(imageIds.length > 0 && { imageIds }),
+        senarys: formData.scenarioIds,
+        ui_elements: formData.uiElementIds,
+        patterns: formData.patternIds,
+      });
+      setToast({ message: 'Изменения сохранены', type: 'success' });
+      setTimeout(() => navigate(appId ? `/apps/${appId}` : '/screens'), 1000);
     } catch (error) {
       console.error('Failed to update screen:', error);
+      setToast({ message: 'Не удалось сохранить', type: 'error' });
     } finally {
       setSaving(false);
     }
@@ -83,9 +103,9 @@ export function ScreenDetailPage() {
     if (!screenId) return;
     setDeleting(true);
     try {
-      await apiClient.deleteScreen(screenId);
+      await deleteAdminScreen(screenId);
       setDeleteModalOpen(false);
-      navigate('/screens');
+      navigate(appId ? `/apps/${appId}` : '/screens');
     } catch (error) {
       console.error('Failed to delete screen:', error);
     } finally {
@@ -97,18 +117,17 @@ export function ScreenDetailPage() {
     return <div className="p-8 text-center text-[#a1a1a1]">Загрузка...</div>;
   }
 
-  if (!screen) {
-    return <div className="p-8 text-center text-[#a1a1a1]">Экран не найден</div>;
-  }
-
   return (
     <div className="p-8">
+      {toast && (
+        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
+      )}
       <Link
-        to="/screens"
+        to={appId ? `/apps/${appId}` : '/screens'}
         className="inline-flex items-center gap-2 text-[#a1a1a1] hover:text-white transition-colors mb-6"
       >
         <ArrowLeft className="h-4 w-4" />
-        Назад к экранам
+        {appId ? 'Назад к приложению' : 'Назад к экранам'}
       </Link>
 
       <PageHeader
@@ -138,17 +157,16 @@ export function ScreenDetailPage() {
       />
 
       <div className="flex gap-6 max-w-6xl">
-        {/* Preview */}
+        {/* Image */}
         <div className="w-80 flex-shrink-0">
-          <div className="bg-[#141414] border border-[#2a2a2a] rounded-xl p-4 sticky top-8">
-            <div className="aspect-[9/16] rounded-lg overflow-hidden">
-              <img
-                src={screen.imageUrl}
-                alt="Screen preview"
-                className="w-full h-full object-cover"
-              />
-            </div>
-          </div>
+          <ImageUploadSlot
+            value={imageUrl}
+            fileId={imageIds[0] ?? null}
+            onChange={(url) => setImageUrl(url ?? '')}
+            onUploaded={(meta) => { if (meta.id) setImageIds([meta.id]); }}
+            label="Изображение экрана"
+            aspectRatio="9/16"
+          />
         </div>
 
         {/* Form */}
@@ -162,7 +180,7 @@ export function ScreenDetailPage() {
               <select
                 id="category"
                 value={formData.categoryId}
-                onChange={(e) => setFormData(prev => ({ ...prev, categoryId: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, categoryId: e.target.value }))}
                 className="w-full px-4 py-2.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg focus:outline-none focus:border-[#a3e635] transition-colors"
               >
                 {screenCategories.map((category) => (
@@ -178,7 +196,7 @@ export function ScreenDetailPage() {
               label="Сценарии"
               items={scenarios}
               selectedIds={formData.scenarioIds}
-              onChange={(ids) => setFormData(prev => ({ ...prev, scenarioIds: ids }))}
+              onChange={(ids) => setFormData((prev) => ({ ...prev, scenarioIds: ids }))}
             />
 
             {/* UI Elements */}
@@ -186,7 +204,7 @@ export function ScreenDetailPage() {
               label="UI элементы"
               items={uiElements}
               selectedIds={formData.uiElementIds}
-              onChange={(ids) => setFormData(prev => ({ ...prev, uiElementIds: ids }))}
+              onChange={(ids) => setFormData((prev) => ({ ...prev, uiElementIds: ids }))}
             />
 
             {/* Patterns */}
@@ -194,7 +212,7 @@ export function ScreenDetailPage() {
               label="Паттерны"
               items={patterns}
               selectedIds={formData.patternIds}
-              onChange={(ids) => setFormData(prev => ({ ...prev, patternIds: ids }))}
+              onChange={(ids) => setFormData((prev) => ({ ...prev, patternIds: ids }))}
             />
           </div>
 
@@ -208,7 +226,7 @@ export function ScreenDetailPage() {
               {saving ? 'Сохранение...' : 'Сохранить'}
             </button>
             <Link
-              to="/screens"
+              to={appId ? `/apps/${appId}` : '/screens'}
               className="px-6 py-2.5 bg-[#1a1a1a] border border-[#2a2a2a] text-white font-medium rounded-lg hover:bg-[#242424] transition-colors"
             >
               Отмена
