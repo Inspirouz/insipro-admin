@@ -16,7 +16,7 @@ const categories = [
     title: 'Паттерны',
     description: 'Повторяющиеся решения и практики проектирования',
     icon: Tag,
-    href: '/categories/patterns',
+    href: '/categories/screens',
     color: 'from-green-500/20 to-teal-500/20',
   },
   {
@@ -27,14 +27,14 @@ const categories = [
     href: '/categories/app',
     color: 'from-orange-500/20 to-red-500/20',
   },
-  {
-    id: 'screens',
-    title: 'Категория экрана',
-    description: 'Категории экранов приложений',
-    icon: LayoutGrid,
-    href: '/categories/screens',
-    color: 'from-cyan-500/20 to-blue-500/20',
-  },
+  // {
+  //   id: 'screens',
+  //   title: 'Категория экрана',
+  //   description: 'Категории экранов приложений',
+  //   icon: LayoutGrid,
+  //   href: '/categories/screens',
+  //   color: 'from-cyan-500/20 to-blue-500/20',
+  // },
   {
     id: 'scenarios',
     title: 'Категории сценариев',

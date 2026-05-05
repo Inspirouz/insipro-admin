@@ -459,7 +459,7 @@ export function AppDetailPage() {
       {/* Scenarios Tab */}
       {activeTab === 'scenarios' && (
         <div className="flex flex-nowrap gap-4 w-full max-w-5xl items-start">
-          <div className="w-1/3 flex-shrink-0 min-w-0">
+          <div className="w-full flex-shrink-0 min-w-0">
             <div className="sticky overflow-y-auto rounded-xl border border-[#2a2a2a] bg-[#141414] p-4" style={{ top: 20, maxHeight: 'calc(100vh - 40px)' }}>
             <div className="flex items-center justify-between gap-2 mb-3">
               <h3 className="font-medium">Категории сценариев</h3>
@@ -478,7 +478,7 @@ export function AppDetailPage() {
                 Добавить
               </button>
             </div>
-            <div className="space-y-0.5 mb-4">
+            <div className="space-y-0.5 mb-4 ">
               {scenarioCategoryTree.map((node) => (
                 <ScenarioCategoryTreeItem
                   key={node.id}
@@ -505,68 +505,7 @@ export function AppDetailPage() {
             </div>
           </div>
 
-          <div className="flex-1 min-w-0 bg-[#141414] border border-[#2a2a2a] rounded-xl box-border" style={{ padding: '1.25rem' }}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Scenarios</h3>
-              
-            </div>
-            {scenariosLoading ? (
-              <p className="text-[#a1a1a1] text-sm py-8">Загрузка...</p>
-            ) : scenariosList.length === 0 ? (
-              <p className="text-[#a1a1a1] text-sm py-8">Нет данных</p>
-            ) : (
-              <div className="space-y-8 max-h-[calc(100vh-12rem)] overflow-auto box-border" style={{ paddingRight: '0.5rem' }}>
-                {scenariosList.map((cat) => {
-                  const title = cat.tag?.name ?? '—';
-                  const allImages = (cat.scenarios ?? []).flatMap((s) => s.images ?? []);
-                  const count = allImages.length;
-                  return (
-                    <div
-                      key={cat.id}
-                      ref={(el) => { scenarioSectionRefs.current[cat.id] = el; }}
-                      className="rounded-xl bg-[#1a1a1a] border border-[#2a2a2a] box-border"
-                      style={{ padding: '1rem' }}
-                    >
-                      <div className="flex items-center justify-between gap-3 mb-3">
-                        <div className="min-w-0">
-                          <h4 className="text-sm font-semibold text-white truncate">{title}</h4>
-                          <p className="text-xs text-[#737373] mt-0.5">
-                            {count} {count === 1 ? 'экран' : count < 5 ? 'экрана' : 'экранов'}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => { setScenarioModalCategoryId(cat.id); setScenarioModalOpen(true); }}
-                           className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#a3e635] text-black text-sm font-medium hover:bg-[#b8ec44] transition-colors"
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                          Create
-                        </button>
-                      </div>
-                      {allImages.length === 0 ? (
-                        <p className="text-[#737373] text-xs py-6 text-center">Нет изображений</p>
-                      ) : (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                          {allImages.map((img) => (
-                            <div
-                              key={img.id}
-                              className="w-full max-w-[180px] h-[320px] rounded-xl overflow-hidden bg-[#0d0d0d] border border-[#262626] hover:border-[#404040] transition-colors mx-auto"
-                            >
-                              <img
-                                src={getProjectImageUrl(img.path)}
-                                alt={img.file_name ?? ''}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+      
         </div>
       )}
 

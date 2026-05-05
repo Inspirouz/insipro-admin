@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { ArrowLeft, Trash2 } from 'lucide-react';
 import { fetchTags } from '../lib/api/tagsApi';
 import { fetchScreensCategories } from '../lib/api/screensCategoriesApi';
+import { fetchScenarioCategories } from '../lib/api/scenarioCategoriesApi';
 import { fetchAdminScreen, updateAdminScreen, deleteAdminScreen } from '../lib/api/adminScreensApi';
 import type { TaxonomyItem, Scenario } from '../lib/types';
 import { PageHeader } from '../components/PageHeader';
@@ -18,6 +19,7 @@ function tagToTaxonomy(tag: { id: string; name: string }, type: TaxonomyItem['ty
 export function ScreenDetailPage() {
   const { id: screenId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -46,12 +48,14 @@ export function ScreenDetailPage() {
   const loadData = async () => {
     if (!screenId) return;
     try {
-      const [screen, screenCategoriesData, uiData, patternsData, scenarioCategories] = await Promise.all([
-        fetchAdminScreen(screenId),
+      const screen = await fetchAdminScreen(screenId);
+      const projectId = searchParams.get('project_id') || screen.appId;
+
+      const [screenCategoriesData, uiData, patternsData, scenarioCategories] = await Promise.all([
         fetchScreensCategories(),
         fetchTags('ui').then((tags) => tags.map((t) => tagToTaxonomy(t, 'uiElement'))),
         fetchTags('patterns').then((tags) => tags.map((t) => tagToTaxonomy(t, 'pattern'))),
-        fetchTags('senary-category'),
+        fetchScenarioCategories(undefined, projectId),
       ]);
 
       setImageUrl(screen.imageUrl);
@@ -63,7 +67,7 @@ export function ScreenDetailPage() {
       setUiElements(uiData);
       setPatterns(patternsData);
       setScenarios(
-        scenarioCategories.map((c) => ({ id: c.id, name: c.name, parentId: undefined }))
+        scenarioCategories.map((c) => ({ id: c.id, name: c.name, parentId: c.parent_id ?? undefined }))
       );
       setFormData({
         categoryId: screen.categoryId,
@@ -175,7 +179,8 @@ export function ScreenDetailPage() {
             {/* Screen Category */}
             <div>
               <label htmlFor="category" className="block text-sm font-medium mb-2">
-                Категория экрана
+                {/* Категория экрана */}
+                Паттерны
               </label>
               <select
                 id="category"
@@ -208,12 +213,12 @@ export function ScreenDetailPage() {
             />
 
             {/* Patterns */}
-            <MultiSelectField
+            {/* <MultiSelectField
               label="Паттерны"
               items={patterns}
               selectedIds={formData.patternIds}
               onChange={(ids) => setFormData((prev) => ({ ...prev, patternIds: ids }))}
-            />
+            /> */}
           </div>
 
           {/* Actions */}

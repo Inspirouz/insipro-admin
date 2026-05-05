@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { apiClient } from '../lib/api';
 import { fetchTags } from '../lib/api/tagsApi';
 import { fetchScreensCategories } from '../lib/api/screensCategoriesApi';
+import { fetchScenarioCategories } from '../lib/api/scenarioCategoriesApi';
 import { createAdminScreen } from '../lib/api/adminScreensApi';
 import type { TaxonomyItem, Scenario } from '../lib/types';
 import { PageHeader } from '../components/PageHeader';
@@ -42,7 +43,7 @@ export function NewScreenPage() {
       fetchScreensCategories(),
       fetchTags('ui').then((tags) => tags.map((t) => tagToTaxonomy(t, 'uiElement'))),
       fetchTags('patterns').then((tags) => tags.map((t) => tagToTaxonomy(t, 'pattern'))),
-      fetchTags('senary-category'),
+      fetchScenarioCategories(undefined, appId),
     ]);
     const categoriesData: TaxonomyItem[] = screenCategoriesData.map((c) => ({
       id: c.id,
@@ -56,7 +57,7 @@ export function NewScreenPage() {
       scenarioCategories.map((c) => ({
         id: c.id,
         name: c.name,
-        parentId: undefined,
+        parentId: c.parent_id ?? undefined,
       }))
     );
     if (categoriesData.length > 0) {
@@ -118,7 +119,8 @@ export function NewScreenPage() {
           {/* Screen Category */}
           <div>
             <label htmlFor="category" className="block text-sm font-medium mb-2">
-              Категория экрана
+              {/* Категория экрана */}
+              Паттерны
             </label>
             <select
               id="category"
@@ -152,12 +154,12 @@ export function NewScreenPage() {
           />
 
           {/* Patterns */}
-          <MultiSelectField
+          {/* <MultiSelectField
             label="Паттерны"
             items={patterns}
             selectedIds={formData.patternIds}
             onChange={(ids) => setFormData(prev => ({ ...prev, patternIds: ids }))}
-          />
+          /> */}
         </div>
 
         {/* Actions */}
