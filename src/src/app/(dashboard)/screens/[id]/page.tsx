@@ -1,10 +1,9 @@
-'use client';
-
 import { useState, useEffect, type ChangeEvent } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { ArrowLeft, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { apiClient } from '@/lib/api';
+import { fetchScenarioCategories } from '@/lib/api/scenarioCategoriesApi';
 import type { Screen, TaxonomyItem, Scenario } from '@/lib/types';
 import { PageHeader } from '@/components/PageHeader';
 import { MultiSelectField } from '@/components/MultiSelectField';
@@ -45,26 +44,30 @@ export default function ScreenDetailPage() {
 
   const loadData = async () => {
     try {
+      const screenData = await apiClient.getScreen(screenId);
+
       const [
-        screenData,
         categoriesData,
         uiData,
         patternsData,
         scenariosData
       ] = await Promise.all([
-        apiClient.getScreen(screenId),
         apiClient.listTaxonomy('screenCategory'),
         apiClient.listTaxonomy('uiElement'),
         apiClient.listTaxonomy('pattern'),
-        apiClient.listScenarios(),
+        fetchScenarioCategories(undefined, screenData.appId),
       ]);
-      
+
       setScreen(screenData);
       setScreenCategories(categoriesData);
       setUiElements(uiData);
       setPatterns(patternsData);
-      setScenarios(scenariosData);
-      
+      setScenarios(scenariosData.map(c => ({
+        id: c.id,
+        name: c.name,
+        parentId: c.parent_id ?? undefined,
+      })));
+
       setFormData({
         categoryId: screenData.categoryId,
         scenarioIds: screenData.scenarioIds,
@@ -112,7 +115,7 @@ export default function ScreenDetailPage() {
   return (
     <div className="p-8">
       <Link
-        href="/screens"
+        to="/screens"
         className="inline-flex items-center gap-2 text-text-secondary hover:text-white transition-colors mb-6"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -165,7 +168,9 @@ export default function ScreenDetailPage() {
             {/* Screen Category */}
             <div>
               <label htmlFor="category" className="block text-sm font-medium mb-2">
-                Категория экрана
+                {/* Категория экрана */}
+
+                Паттерны
               </label>
               <select
                 id="category"
@@ -216,7 +221,7 @@ export default function ScreenDetailPage() {
               {saving ? 'Сохранение...' : 'Сохранить'}
             </button>
             <Link
-              href="/screens"
+              to="/screens"
               className="px-6 py-2.5 bg-bg-tertiary border border-border text-white font-medium rounded-lg hover:bg-bg-secondary transition-colors"
             >
               Отмена
