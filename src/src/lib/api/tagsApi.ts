@@ -44,6 +44,7 @@ interface ListResponse {
 export async function fetchTags(type?: string, search?: string): Promise<TagItem[]> {
   const baseUrl = tagsUrl();
   const params = new URLSearchParams();
+  params.set('page_size', '999');
   if (type) params.set('type', type);
   if (search && search.trim()) params.set('search', search.trim());
   const query = params.toString();
