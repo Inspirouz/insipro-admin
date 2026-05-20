@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, ChevronDown, X } from 'lucide-react';
+import { Check, ChevronDown, X, Plus } from 'lucide-react';
 
 interface Item {
   id: string;
@@ -11,9 +11,10 @@ interface MultiSelectFieldProps {
   items: Item[];
   selectedIds: string[];
   onChange: (ids: string[]) => void;
+  onAddNew?: () => void;
 }
 
-export function MultiSelectField({ label, items, selectedIds, onChange }: MultiSelectFieldProps) {
+export function MultiSelectField({ label, items, selectedIds, onChange, onAddNew }: MultiSelectFieldProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
 
@@ -118,6 +119,20 @@ export function MultiSelectField({ label, items, selectedIds, onChange }: MultiS
                   </div>
                 )}
               </div>
+
+              {/* Add new */}
+              {onAddNew && (
+                <div className="border-t border-[#2a2a2a]">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setIsOpen(false); onAddNew(); }}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-[#a3e635] hover:bg-[#242424] transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Добавить новую категорию
+                  </button>
+                </div>
+              )}
             </div>
           </>
         )}

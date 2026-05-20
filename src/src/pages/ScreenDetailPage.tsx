@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { ArrowLeft, Trash2 } from 'lucide-react';
-import { fetchTags } from '../lib/api/tagsApi';
-import { fetchScreensCategories } from '../lib/api/screensCategoriesApi';
+import { fetchTags, createTag } from '../lib/api/tagsApi';
+import { fetchScreensCategories, createScreenCategory } from '../lib/api/screensCategoriesApi';
 import { fetchScenarioCategories } from '../lib/api/scenarioCategoriesApi';
 import { fetchAdminScreen, updateAdminScreen, deleteAdminScreen } from '../lib/api/adminScreensApi';
 import type { TaxonomyItem, Scenario } from '../lib/types';
@@ -11,6 +11,7 @@ import { MultiSelectField } from '../components/MultiSelectField';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ImageUploadSlot } from '../components/ImageUploadSlot';
 import { Toast } from '../components/Toast';
+import { AddTaxonomyDialog } from '../components/AddTaxonomyDialog';
 
 function tagToTaxonomy(tag: { id: string; name: string }, type: TaxonomyItem['type']): TaxonomyItem {
   return { id: tag.id, name: tag.name, type };
@@ -26,16 +27,17 @@ export function ScreenDetailPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [addPatternOpen, setAddPatternOpen] = useState(false);
+  const [addUiElementOpen, setAddUiElementOpen] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
   const [imageIds, setImageIds] = useState<string[]>([]);
   const [appId, setAppId] = useState('');
   const [screenCategories, setScreenCategories] = useState<TaxonomyItem[]>([]);
   const [uiElements, setUiElements] = useState<TaxonomyItem[]>([]);
-  const [patterns, setPatterns] = useState<TaxonomyItem[]>([]);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
 
   const [formData, setFormData] = useState({
-    categoryId: '',
+    categoryIds: [] as string[],
     scenarioIds: [] as string[],
     uiElementIds: [] as string[],
     patternIds: [] as string[],
@@ -51,10 +53,9 @@ export function ScreenDetailPage() {
       const screen = await fetchAdminScreen(screenId);
       const projectId = searchParams.get('project_id') || screen.appId;
 
-      const [screenCategoriesData, uiData, patternsData, scenarioCategories] = await Promise.all([
+      const [screenCategoriesData, uiData, scenarioCategories] = await Promise.all([
         fetchScreensCategories(),
         fetchTags('ui').then((tags) => tags.map((t) => tagToTaxonomy(t, 'uiElement'))),
-        fetchTags('patterns').then((tags) => tags.map((t) => tagToTaxonomy(t, 'pattern'))),
         fetchScenarioCategories(undefined, projectId),
       ]);
 
@@ -65,12 +66,11 @@ export function ScreenDetailPage() {
         screenCategoriesData.map((c) => ({ id: c.id, name: c.name, type: 'screenCategory' as const }))
       );
       setUiElements(uiData);
-      setPatterns(patternsData);
       setScenarios(
         scenarioCategories.map((c) => ({ id: c.id, name: c.name, parentId: c.parent_id ?? undefined }))
       );
       setFormData({
-        categoryId: screen.categoryId,
+        categoryIds: screen.categoryId ? [screen.categoryId] : [],
         scenarioIds: screen.scenarioIds,
         uiElementIds: screen.uiElementIds,
         patternIds: screen.patternIds,
@@ -87,7 +87,7 @@ export function ScreenDetailPage() {
     setSaving(true);
     try {
       await updateAdminScreen(screenId, {
-        screens_category_id: formData.categoryId,
+        screens_category_id: formData.categoryIds[0] ?? '',
         ...(imageIds.length > 0 && { imageIds }),
         senarys: formData.scenarioIds,
         ui_elements: formData.uiElementIds,
@@ -121,11 +121,45 @@ export function ScreenDetailPage() {
     return <div className="p-8 text-center text-[#a1a1a1]">Загрузка...</div>;
   }
 
+  const handleAddUiElement = async (name: string) => {
+    try {
+      const tag = await createTag(name, 'ui');
+      const newItem = tagToTaxonomy(tag, 'uiElement');
+      setUiElements((prev) => [...prev, newItem]);
+      setFormData((prev) => ({ ...prev, uiElementIds: [...prev.uiElementIds, newItem.id] }));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleAddScreenCategory = async (name: string) => {
+    try {
+      const cat = await createScreenCategory(name);
+      const newItem: TaxonomyItem = { id: cat.id, name: cat.name, type: 'screenCategory' };
+      setScreenCategories((prev) => [...prev, newItem]);
+      setFormData((prev) => ({ ...prev, categoryIds: [...prev.categoryIds, newItem.id] }));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   return (
     <div className="p-8">
       {toast && (
         <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
       )}
+      <AddTaxonomyDialog
+        isOpen={addPatternOpen}
+        onClose={() => setAddPatternOpen(false)}
+        onSave={handleAddScreenCategory}
+        title="Добавить паттерн"
+      />
+      <AddTaxonomyDialog
+        isOpen={addUiElementOpen}
+        onClose={() => setAddUiElementOpen(false)}
+        onSave={handleAddUiElement}
+        title="Добавить UI элемент"
+      />
       <Link
         to={appId ? `/apps/${appId}` : '/screens'}
         className="inline-flex items-center gap-2 text-[#a1a1a1] hover:text-white transition-colors mb-6"
@@ -176,25 +210,14 @@ export function ScreenDetailPage() {
         {/* Form */}
         <div className="flex-1">
           <div className="bg-[#141414] border border-[#2a2a2a] rounded-xl p-6 space-y-6">
-            {/* Screen Category */}
-            <div>
-              <label htmlFor="category" className="block text-sm font-medium mb-2">
-                {/* Категория экрана */}
-                Паттерны
-              </label>
-              <select
-                id="category"
-                value={formData.categoryId}
-                onChange={(e) => setFormData((prev) => ({ ...prev, categoryId: e.target.value }))}
-                className="w-full px-4 py-2.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg focus:outline-none focus:border-[#a3e635] transition-colors"
-              >
-                {screenCategories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Screen Category / Паттерны */}
+            <MultiSelectField
+              label="Паттерны"
+              items={screenCategories}
+              selectedIds={formData.categoryIds}
+              onChange={(ids) => setFormData((prev) => ({ ...prev, categoryIds: ids }))}
+              onAddNew={() => setAddPatternOpen(true)}
+            />
 
             {/* Scenarios */}
             <MultiSelectField
@@ -210,15 +233,9 @@ export function ScreenDetailPage() {
               items={uiElements}
               selectedIds={formData.uiElementIds}
               onChange={(ids) => setFormData((prev) => ({ ...prev, uiElementIds: ids }))}
+              onAddNew={() => setAddUiElementOpen(true)}
             />
 
-            {/* Patterns */}
-            {/* <MultiSelectField
-              label="Паттерны"
-              items={patterns}
-              selectedIds={formData.patternIds}
-              onChange={(ids) => setFormData((prev) => ({ ...prev, patternIds: ids }))}
-            /> */}
           </div>
 
           {/* Actions */}

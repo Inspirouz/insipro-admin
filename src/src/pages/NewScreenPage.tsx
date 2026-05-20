@@ -2,14 +2,15 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { apiClient } from '../lib/api';
-import { fetchTags } from '../lib/api/tagsApi';
-import { fetchScreensCategories } from '../lib/api/screensCategoriesApi';
+import { fetchTags, createTag } from '../lib/api/tagsApi';
+import { fetchScreensCategories, createScreenCategory } from '../lib/api/screensCategoriesApi';
 import { fetchScenarioCategories } from '../lib/api/scenarioCategoriesApi';
 import { createAdminScreen } from '../lib/api/adminScreensApi';
 import type { TaxonomyItem, Scenario } from '../lib/types';
 import { PageHeader } from '../components/PageHeader';
 import { ImageUploadSlot } from '../components/ImageUploadSlot';
 import { MultiSelectField } from '../components/MultiSelectField';
+import { AddTaxonomyDialog } from '../components/AddTaxonomyDialog';
 
 function tagToTaxonomy(tag: { id: string; name: string }, type: TaxonomyItem['type']): TaxonomyItem {
   return { id: tag.id, name: tag.name, type };
@@ -22,13 +23,14 @@ export function NewScreenPage() {
   const [loading, setLoading] = useState(false);
   const [screenCategories, setScreenCategories] = useState<TaxonomyItem[]>([]);
   const [uiElements, setUiElements] = useState<TaxonomyItem[]>([]);
-  const [patterns, setPatterns] = useState<TaxonomyItem[]>([]);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
+  const [addPatternOpen, setAddPatternOpen] = useState(false);
+  const [addUiElementOpen, setAddUiElementOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     imageUrl: null as string | null,
     imageId: null as string | null,
-    categoryId: '',
+    categoryIds: [] as string[],
     scenarioIds: [] as string[],
     uiElementIds: [] as string[],
     patternIds: [] as string[],
@@ -39,10 +41,9 @@ export function NewScreenPage() {
   }, []);
 
   const loadData = async () => {
-    const [screenCategoriesData, uiData, patternsData, scenarioCategories] = await Promise.all([
+    const [screenCategoriesData, uiData, scenarioCategories] = await Promise.all([
       fetchScreensCategories(),
       fetchTags('ui').then((tags) => tags.map((t) => tagToTaxonomy(t, 'uiElement'))),
-      fetchTags('patterns').then((tags) => tags.map((t) => tagToTaxonomy(t, 'pattern'))),
       fetchScenarioCategories(undefined, appId),
     ]);
     const categoriesData: TaxonomyItem[] = screenCategoriesData.map((c) => ({
@@ -52,7 +53,6 @@ export function NewScreenPage() {
     }));
     setScreenCategories(categoriesData);
     setUiElements(uiData);
-    setPatterns(patternsData);
     setScenarios(
       scenarioCategories.map((c) => ({
         id: c.id,
@@ -61,7 +61,7 @@ export function NewScreenPage() {
       }))
     );
     if (categoriesData.length > 0) {
-      setFormData(prev => ({ ...prev, categoryId: categoriesData[0].id }));
+      setFormData(prev => ({ ...prev, categoryIds: [categoriesData[0].id] }));
     }
   };
 
@@ -77,7 +77,7 @@ export function NewScreenPage() {
     try {
       await createAdminScreen({
         project_id: appId,
-        screens_category_id: formData.categoryId,
+        screens_category_id: formData.categoryIds[0] ?? '',
         imageIds: formData.imageId ? [formData.imageId] : [],
         senarys: formData.scenarioIds,
         ui_elements: formData.uiElementIds,
@@ -91,8 +91,42 @@ export function NewScreenPage() {
     }
   };
 
+  const handleAddUiElement = async (name: string) => {
+    try {
+      const tag = await createTag(name, 'ui');
+      const newItem = tagToTaxonomy(tag, 'uiElement');
+      setUiElements((prev) => [...prev, newItem]);
+      setFormData((prev) => ({ ...prev, uiElementIds: [...prev.uiElementIds, newItem.id] }));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleAddScreenCategory = async (name: string) => {
+    try {
+      const cat = await createScreenCategory(name);
+      const newItem: TaxonomyItem = { id: cat.id, name: cat.name, type: 'screenCategory' };
+      setScreenCategories((prev) => [...prev, newItem]);
+      setFormData((prev) => ({ ...prev, categoryIds: [...prev.categoryIds, newItem.id] }));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   return (
     <div className="p-8">
+      <AddTaxonomyDialog
+        isOpen={addPatternOpen}
+        onClose={() => setAddPatternOpen(false)}
+        onSave={handleAddScreenCategory}
+        title="Добавить паттерн"
+      />
+      <AddTaxonomyDialog
+        isOpen={addUiElementOpen}
+        onClose={() => setAddUiElementOpen(false)}
+        onSave={handleAddUiElement}
+        title="Добавить UI элемент"
+      />
       <Link
         to={`/apps/${appId}`}
         className="inline-flex items-center gap-2 text-[#a1a1a1] hover:text-white transition-colors mb-6"
@@ -116,26 +150,14 @@ export function NewScreenPage() {
             />
           </div>
 
-          {/* Screen Category */}
-          <div>
-            <label htmlFor="category" className="block text-sm font-medium mb-2">
-              {/* Категория экрана */}
-              Паттерны
-            </label>
-            <select
-              id="category"
-              value={formData.categoryId}
-              onChange={(e) => setFormData(prev => ({ ...prev, categoryId: e.target.value }))}
-              className="w-full px-4 py-2.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg focus:outline-none focus:border-[#a3e635] transition-colors"
-              required
-            >
-              {screenCategories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Screen Category / Паттерны */}
+          <MultiSelectField
+            label="Паттерны"
+            items={screenCategories}
+            selectedIds={formData.categoryIds}
+            onChange={(ids) => setFormData(prev => ({ ...prev, categoryIds: ids }))}
+            onAddNew={() => setAddPatternOpen(true)}
+          />
 
           {/* Scenarios */}
           <MultiSelectField
@@ -151,15 +173,9 @@ export function NewScreenPage() {
             items={uiElements}
             selectedIds={formData.uiElementIds}
             onChange={(ids) => setFormData(prev => ({ ...prev, uiElementIds: ids }))}
+            onAddNew={() => setAddUiElementOpen(true)}
           />
 
-          {/* Patterns */}
-          {/* <MultiSelectField
-            label="Паттерны"
-            items={patterns}
-            selectedIds={formData.patternIds}
-            onChange={(ids) => setFormData(prev => ({ ...prev, patternIds: ids }))}
-          /> */}
         </div>
 
         {/* Actions */}
