@@ -66,8 +66,11 @@ export function ScreenDetailPage() {
         screenCategoriesData.map((c) => ({ id: c.id, name: c.name, type: 'screenCategory' as const }))
       );
       setUiElements(uiData);
+      const filteredScenarios = scenarioCategories.filter(
+        (c) => !c.project_id || c.project_id === projectId
+      );
       setScenarios(
-        scenarioCategories.map((c) => ({ id: c.id, name: c.name, parentId: c.parent_id ?? undefined }))
+        filteredScenarios.map((c) => ({ id: c.id, name: c.name, parentId: c.parent_id ?? undefined }))
       );
       setFormData({
         categoryIds: screen.categoryId ? [screen.categoryId] : [],

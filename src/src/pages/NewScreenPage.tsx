@@ -53,8 +53,11 @@ export function NewScreenPage() {
     }));
     setScreenCategories(categoriesData);
     setUiElements(uiData);
+    const filteredScenarios = scenarioCategories.filter(
+      (c) => !c.project_id || c.project_id === appId
+    );
     setScenarios(
-      scenarioCategories.map((c) => ({
+      filteredScenarios.map((c) => ({
         id: c.id,
         name: c.name,
         parentId: c.parent_id ?? undefined,
