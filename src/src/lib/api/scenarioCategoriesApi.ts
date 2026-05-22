@@ -13,6 +13,7 @@ export interface ScenarioCategoryItem {
   id: string;
   name: string;
   tag_id?: string;
+  project_id?: string;
   sort_order?: number;
   parent_id?: string | null;
   scenarios_count?: number;
@@ -66,6 +67,7 @@ function mapProjectItemToCategory(item: ApiScenarioCategoryProjectItem): Scenari
     id: item.id,
     name: (item.tag && typeof item.tag.name === 'string') ? item.tag.name : '',
     tag_id: typeof item.tag_id === 'string' ? item.tag_id : undefined,
+    project_id: typeof item.project_id === 'string' ? item.project_id : undefined,
     parent_id: item.parent_id ?? null,
     scenarios_count: typeof item.scenarios_count === 'number' ? item.scenarios_count : undefined,
   };

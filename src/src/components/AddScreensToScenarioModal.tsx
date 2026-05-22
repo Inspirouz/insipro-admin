@@ -111,7 +111,7 @@ export function AddScreensToScenarioModal({
                 : 'Ничего не найдено'}
             </div>
           ) : (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+            <div className="flex flex-wrap gap-3">
               {filtered.map((screen) => {
                 const selected = selectedIds.includes(screen.id);
                 return (
@@ -119,13 +119,14 @@ export function AddScreensToScenarioModal({
                     key={screen.id}
                     type="button"
                     onClick={() => toggle(screen.id)}
+                    style={{ width: 110, height: 195, flexShrink: 0 }}
                     className={`relative rounded-lg overflow-hidden border-2 transition-all ${
                       selected
                         ? 'border-[#a3e635]'
                         : 'border-transparent hover:border-[#3a3a3a]'
                     }`}
                   >
-                    <div className="aspect-[9/16] bg-[#1a1a1a]">
+                    <div className="w-full h-full bg-[#1a1a1a]">
                       {screen.imageUrl && (
                         <img
                           src={screen.imageUrl}

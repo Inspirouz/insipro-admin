@@ -209,7 +209,7 @@ export function AppDetailPage() {
       setScreenCategories(
         categoriesData.map((c) => ({ id: c.id, name: c.name, type: 'screenCategory' as const }))
       );
-      setScenarioCategoriesRaw(scenarioCategoriesData);
+      setScenarioCategoriesRaw(scenarioCategoriesData.filter((c) => !c.project_id || c.project_id === appId));
     } finally {
       setLoading(false);
     }
@@ -247,11 +247,14 @@ export function AppDetailPage() {
     [scenarioCategoriesFlat]
   );
 
+  const filterCategoriesByApp = (data: ScenarioCategoryItem[]) =>
+    data.filter((c) => !c.project_id || c.project_id === appId);
+
   const refetchScenarioCategories = async () => {
     if (!appId) return;
     try {
       const data = await fetchScenarioCategories(undefined, appId);
-      setScenarioCategoriesRaw(data);
+      setScenarioCategoriesRaw(filterCategoriesByApp(data));
     } catch (e) {
       console.error(e);
     }
@@ -628,14 +631,15 @@ export function AppDetailPage() {
                     </button>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                  <div className="flex flex-wrap gap-4">
                     {scenarioScreens.map((screen) => (
                       <div
                         key={screen.id}
+                        style={{ width: 140, height: 248, flexShrink: 0 }}
                         className="group relative bg-[#141414] border border-[#2a2a2a] rounded-xl overflow-hidden hover:border-[#3a3a3a] transition-all"
                       >
-                        <Link to={`/screens/${screen.id}`}>
-                          <div className="aspect-[9/16] bg-[#1a1a1a]">
+                        <Link to={`/screens/${screen.id}`} className="block w-full h-full">
+                          <div className="w-full h-full bg-[#1a1a1a]">
                             {screen.imageUrl && (
                               <img
                                 src={screen.imageUrl}
