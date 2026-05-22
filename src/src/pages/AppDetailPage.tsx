@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
-import { ArrowLeft, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { fetchProject } from '../lib/api/projectsApi';
 import { fetchScreensCategories } from '../lib/api/screensCategoriesApi';
 import { fetchScenarioCategories, deleteScenarioCategory, type ScenarioCategoryItem } from '../lib/api/scenarioCategoriesApi';
-import { fetchAdminScreens } from '../lib/api/adminScreensApi';
+import { fetchAdminScreens, updateAdminScreen } from '../lib/api/adminScreensApi';
 import { fetchAdminScenariosByProject, type ScenarioCategoryWithScenarios } from '../lib/api/scenariosApi';
 import { getProjectImageUrl } from '../lib/api/projectsApi';
 import { AddScenarioCategoryModal } from '../components/AddScenarioCategoryModal';
 import { AddScenarioModal } from '../components/AddScenarioModal';
+import { AddScreensToScenarioModal } from '../components/AddScreensToScenarioModal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import type { App, Screen, TaxonomyItem } from '../lib/types';
 
@@ -39,6 +40,7 @@ function ScenarioCategoryTreeItem({
   onAddChild,
   onEdit,
   onDelete,
+  screenCountsMap,
 }: {
   node: ScenarioCategoryNode;
   depth: number;
@@ -47,11 +49,12 @@ function ScenarioCategoryTreeItem({
   onAddChild: (id: string, name: string) => void;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
+  screenCountsMap: Record<string, number>;
   isLast?: boolean;
 }) {
   const isSelected = selectedId === node.id;
   const hasChildren = node.children.length > 0;
-  const count = node.scenarios_count ?? 0;
+  const count = screenCountsMap[node.id] ?? 0;
 
   return (
     <div className="py-0.5">
@@ -83,7 +86,7 @@ function ScenarioCategoryTreeItem({
           >
             <Pencil className="h-3.5 w-3.5" />
           </button>
-          {depth < 2 && (
+          {depth < 3 && (
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onAddChild(node.id, node.name); }}
@@ -116,6 +119,7 @@ function ScenarioCategoryTreeItem({
               onAddChild={onAddChild}
               onEdit={onEdit}
               onDelete={onDelete}
+              screenCountsMap={screenCountsMap}
             />
           ))}
         </div>
@@ -162,6 +166,9 @@ export function AppDetailPage() {
   const [scenariosLoading, setScenariosLoading] = useState(false);
   const [scenarioModalOpen, setScenarioModalOpen] = useState(false);
   const [scenarioModalCategoryId, setScenarioModalCategoryId] = useState<string | null>(null);
+  const [addScreensModalOpen, setAddScreensModalOpen] = useState(false);
+  const [removeScreenConfirmId, setRemoveScreenConfirmId] = useState<string | null>(null);
+  const [removingScreen, setRemovingScreen] = useState(false);
   const scenarioSectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
@@ -257,6 +264,76 @@ export function AppDetailPage() {
       setScenariosList(data);
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const refetchScreens = async () => {
+    if (!appId) return;
+    try {
+      const data = await fetchAdminScreens(appId);
+      setScreens(data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const scenarioScreenCountsMap = useMemo(() => {
+    const counts: Record<string, number> = {};
+    screens.forEach((screen) => {
+      screen.scenarioIds.forEach((id) => {
+        counts[id] = (counts[id] || 0) + 1;
+      });
+    });
+    return counts;
+  }, [screens]);
+
+  const scenarioScreens = useMemo(
+    () =>
+      scenarioCategoryFilter
+        ? screens.filter((s) => s.scenarioIds.includes(scenarioCategoryFilter))
+        : [],
+    [screens, scenarioCategoryFilter]
+  );
+
+  const selectedCategoryName = useMemo(
+    () =>
+      scenarioCategoryFilter
+        ? scenarioCategoriesFlat.find((c) => c.id === scenarioCategoryFilter)?.name ?? ''
+        : '',
+    [scenarioCategoryFilter, scenarioCategoriesFlat]
+  );
+
+  const handleScreensAdded = (addedIds: string[]) => {
+    if (!scenarioCategoryFilter) return;
+    const catId = scenarioCategoryFilter;
+    setScreens((prev) =>
+      prev.map((s) =>
+        addedIds.includes(s.id) && !s.scenarioIds.includes(catId)
+          ? { ...s, scenarioIds: [...s.scenarioIds, catId] }
+          : s
+      )
+    );
+  };
+
+  const handleRemoveScreenConfirm = async () => {
+    if (!removeScreenConfirmId || !scenarioCategoryFilter) return;
+    setRemovingScreen(true);
+    try {
+      const screen = screens.find((s) => s.id === removeScreenConfirmId);
+      if (screen) {
+        const newIds = screen.scenarioIds.filter((id) => id !== scenarioCategoryFilter);
+        await updateAdminScreen(removeScreenConfirmId, { senarys: newIds });
+        setScreens((prev) =>
+          prev.map((s) =>
+            s.id === removeScreenConfirmId ? { ...s, scenarioIds: newIds } : s
+          )
+        );
+      }
+      setRemoveScreenConfirmId(null);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setRemovingScreen(false);
     }
   };
 
@@ -458,54 +535,131 @@ export function AppDetailPage() {
 
       {/* Scenarios Tab */}
       {activeTab === 'scenarios' && (
-        <div className="flex flex-nowrap gap-4 w-full max-w-5xl items-start">
-          <div className="w-full flex-shrink-0 min-w-0">
-            <div className="sticky overflow-y-auto rounded-xl border border-[#2a2a2a] bg-[#141414] p-4" style={{ top: 20, maxHeight: 'calc(100vh - 40px)' }}>
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <h3 className="font-medium">Категории сценариев</h3>
-              <button
-                type="button"
-                onClick={() => {
-                  setScenarioCategoryParentId(null);
-                  setScenarioCategoryParentName('');
-                  setEditingScenarioCategoryId(null);
-                  setScenarioCategoryModalOpen(true);
-                }}
-                className="flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg bg-[#a3e635] text-black text-sm font-medium hover:bg-[#b8ec44] transition-colors flex-shrink-0"
-                title="Добавить категорию"
-              >
-                <Plus className="h-4 w-4" />
-                Добавить
-              </button>
-            </div>
-            <div className="space-y-0.5 mb-4 ">
-              {scenarioCategoryTree.map((node) => (
-                <ScenarioCategoryTreeItem
-                  key={node.id}
-                  node={node}
-                  depth={0}
-                  selectedId={scenarioCategoryFilter}
-                  onSelect={setScenarioCategoryFilter}
-                  onAddChild={(id, name) => {
-                    setScenarioCategoryParentId(id);
-                    setScenarioCategoryParentName(name);
+        <div className="flex gap-6 items-start">
+          {/* Left: tree sidebar */}
+          <div className="w-64 flex-shrink-0">
+            <div
+              className="sticky overflow-y-auto rounded-xl border border-[#2a2a2a] bg-[#141414] p-4"
+              style={{ top: 20, maxHeight: 'calc(100vh - 160px)' }}
+            >
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <h3 className="font-medium text-sm">Сценарии</h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setScenarioCategoryParentId(null);
+                    setScenarioCategoryParentName('');
                     setEditingScenarioCategoryId(null);
                     setScenarioCategoryModalOpen(true);
                   }}
-                  onEdit={(id) => {
-                    setEditingScenarioCategoryId(id);
-                    setScenarioCategoryParentId(null);
-                    setScenarioCategoryParentName('');
-                    setScenarioCategoryModalOpen(true);
-                  }}
-                  onDelete={setDeleteScenarioCategoryId}
-                />
-              ))}
-            </div>
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#a3e635] text-black text-xs font-medium hover:bg-[#b8ec44] transition-colors"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Добавить
+                </button>
+              </div>
+
+              {scenarioCategoryTree.length === 0 ? (
+                <p className="text-xs text-[#6b6b6b] text-center py-4">
+                  Нет категорий
+                </p>
+              ) : (
+                <div className="space-y-0.5">
+                  {scenarioCategoryTree.map((node) => (
+                    <ScenarioCategoryTreeItem
+                      key={node.id}
+                      node={node}
+                      depth={0}
+                      selectedId={scenarioCategoryFilter}
+                      onSelect={setScenarioCategoryFilter}
+                      onAddChild={(id, name) => {
+                        setScenarioCategoryParentId(id);
+                        setScenarioCategoryParentName(name);
+                        setEditingScenarioCategoryId(null);
+                        setScenarioCategoryModalOpen(true);
+                      }}
+                      onEdit={(id) => {
+                        setEditingScenarioCategoryId(id);
+                        setScenarioCategoryParentId(null);
+                        setScenarioCategoryParentName('');
+                        setScenarioCategoryModalOpen(true);
+                      }}
+                      onDelete={setDeleteScenarioCategoryId}
+                      screenCountsMap={scenarioScreenCountsMap}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
-      
+          {/* Right: screens in selected scenario */}
+          <div className="flex-1 min-w-0">
+            {!scenarioCategoryFilter ? (
+              <div className="flex flex-col items-center justify-center py-20 text-[#a1a1a1]">
+                <p className="text-sm">Выберите сценарий слева</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-medium">{selectedCategoryName}</h2>
+                  <button
+                    type="button"
+                    onClick={() => setAddScreensModalOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-white text-black font-medium rounded-lg hover:bg-gray-100 transition-colors text-sm"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Добавить экраны
+                  </button>
+                </div>
+
+                {scenariosLoading ? (
+                  <div className="text-center py-12 text-[#a1a1a1] text-sm">Загрузка...</div>
+                ) : scenarioScreens.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-[#a1a1a1]">
+                    <p className="text-sm mb-3">В этом сценарии нет экранов</p>
+                    <button
+                      type="button"
+                      onClick={() => setAddScreensModalOpen(true)}
+                      className="flex items-center gap-2 px-4 py-2.5 bg-[#1a1a1a] border border-[#2a2a2a] text-white rounded-lg hover:bg-[#242424] transition-colors text-sm"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Добавить экраны
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    {scenarioScreens.map((screen) => (
+                      <div
+                        key={screen.id}
+                        className="group relative bg-[#141414] border border-[#2a2a2a] rounded-xl overflow-hidden hover:border-[#3a3a3a] transition-all"
+                      >
+                        <Link to={`/screens/${screen.id}`}>
+                          <div className="aspect-[9/16] bg-[#1a1a1a]">
+                            {screen.imageUrl && (
+                              <img
+                                src={screen.imageUrl}
+                                alt=""
+                                className="w-full h-full object-cover"
+                              />
+                            )}
+                          </div>
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => setRemoveScreenConfirmId(screen.id)}
+                          className="absolute top-2 right-2 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/80"
+                          title="Убрать из сценария"
+                        >
+                          <X className="h-3.5 w-3.5 text-white" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       )}
 
@@ -551,6 +705,26 @@ export function AppDetailPage() {
         scenarioCategories={scenarioCategoriesRaw.map((c) => ({ id: c.id, name: c.name }))}
         onSuccess={refetchScenarios}
         initialScenarioCategoryId={scenarioModalCategoryId}
+      />
+
+      <AddScreensToScenarioModal
+        isOpen={addScreensModalOpen}
+        onClose={() => setAddScreensModalOpen(false)}
+        scenarioCategoryId={scenarioCategoryFilter ?? ''}
+        appScreens={screens}
+        onSuccess={handleScreensAdded}
+      />
+
+      <ConfirmDialog
+        isOpen={!!removeScreenConfirmId}
+        onClose={() => setRemoveScreenConfirmId(null)}
+        onConfirm={handleRemoveScreenConfirm}
+        title="Убрать экран из сценария?"
+        description="Экран будет удалён из этого сценария, но останется в приложении."
+        confirmLabel="Убрать"
+        cancelLabel="Отмена"
+        variant="danger"
+        loading={removingScreen}
       />
     </div>
   );
