@@ -65,6 +65,7 @@ interface ApiProjectItem {
   categories?: ApiCategory[];
   images?: ApiImage[];
   created_at?: string;
+  is_active?: boolean;
   [key: string]: unknown;
 }
 
@@ -123,6 +124,7 @@ function mapProject(p: ApiProjectItem): App {
     categoryId,
     platforms,
     createdAt: date,
+    isActive: p.is_active !== false,
   };
 }
 
@@ -307,6 +309,35 @@ export async function deleteProject(id: string): Promise<void> {
     } catch {
       // ignore
     }
+    throw new Error(msg);
+  }
+}
+
+/**
+ * PATCH /api/admin/projects/{id} — toggle is_active status only
+ */
+export async function toggleProjectStatus(id: string, isActive: boolean): Promise<void> {
+  const base = getApiBase();
+  const path = base ? '/admin/projects' : '/api/admin/projects';
+  const url = base ? `${base.replace(/\/$/, '')}${path}` : path;
+  const fullUrl = `${url}/${encodeURIComponent(id)}`;
+
+  const token = getToken();
+  const headers: HeadersInit = { 'Content-Type': 'application/json' };
+  if (token) (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(fullUrl, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify({ is_active: isActive }),
+  });
+
+  if (!res.ok) {
+    let msg = `Request failed: ${res.status}`;
+    try {
+      const json = await res.json() as { message?: string };
+      if (typeof json.message === 'string') msg = json.message;
+    } catch { /* ignore */ }
     throw new Error(msg);
   }
 }

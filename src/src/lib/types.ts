@@ -9,6 +9,7 @@ export interface App {
   categoryId: string;
   platforms: ('ios' | 'android' | 'web')[];
   createdAt: Date;
+  isActive: boolean;
 }
 
 export interface Screen {
