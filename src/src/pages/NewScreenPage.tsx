@@ -150,6 +150,7 @@ export function NewScreenPage() {
               onUploaded={(meta) => setFormData(prev => ({ ...prev, imageId: meta.id }))}
               label="Изображение экрана"
               aspectRatio="9/16"
+              dupCheckKey={appId}
             />
           </div>
 

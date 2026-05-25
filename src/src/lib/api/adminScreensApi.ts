@@ -45,6 +45,7 @@ interface ApiScreenItem {
   senarys?: Array<{ id: string }> | string[];
   ui_elements?: Array<{ id: string }> | string[];
   patterns?: Array<{ id: string }> | string[];
+  is_marked?: boolean;
   created_at?: string;
   [key: string]: unknown;
 }
@@ -119,6 +120,7 @@ export async function fetchAdminScreens(projectId: string): Promise<Screen[]> {
       scenarioIds,
       uiElementIds,
       patternIds,
+      isMarked: s.is_marked ?? false,
       createdAt: s.created_at ? new Date(s.created_at) : new Date(),
     };
   });
@@ -157,6 +159,7 @@ export async function fetchAdminScreen(id: string): Promise<Screen> {
     scenarioIds: toIds(s.senarys as Array<{ id: string } | string> | undefined),
     uiElementIds: toIds(s.ui_elements as Array<{ id: string } | string> | undefined),
     patternIds: toIds(s.patterns as Array<{ id: string } | string> | undefined),
+    isMarked: s.is_marked ?? false,
     createdAt: s.created_at ? new Date(s.created_at) : new Date(),
   };
 }
@@ -167,6 +170,7 @@ export interface UpdateAdminScreenBody {
   senarys?: string[];
   ui_elements?: string[];
   patterns?: string[];
+  is_marked?: boolean;
 }
 
 /**

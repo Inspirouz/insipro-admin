@@ -111,7 +111,7 @@ export function AddScreensToScenarioModal({
                 : 'Ничего не найдено'}
             </div>
           ) : (
-            <div className="flex flex-wrap gap-3">
+            <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, 80px)' }}>
               {filtered.map((screen) => {
                 const selected = selectedIds.includes(screen.id);
                 return (
@@ -119,7 +119,7 @@ export function AddScreensToScenarioModal({
                     key={screen.id}
                     type="button"
                     onClick={() => toggle(screen.id)}
-                    style={{ width: 110, height: 195, flexShrink: 0 }}
+                    style={{ width: 80, height: 142, flexShrink: 0 }}
                     className={`relative rounded-lg overflow-hidden border-2 transition-all ${
                       selected
                         ? 'border-[#a3e635]'

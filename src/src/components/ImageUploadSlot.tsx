@@ -1,5 +1,5 @@
-import { Upload, X, Loader2 } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { Upload, X, Loader2, ClipboardPaste } from 'lucide-react';
+import { useRef, useState, useEffect } from 'react';
 import { uploadFile, uploadFileWithMeta, deleteFile, UploadedFileMeta } from '../lib/api/fileApi';
 import { getProjectImageUrl } from '../lib/api/projectsApi';
 
@@ -13,31 +13,112 @@ interface ImageUploadSlotProps {
   slotWidth?: number;
   /** Optional callback with full upload meta (id + url/path) */
   onUploaded?: (meta: UploadedFileMeta) => void;
+  /** Namespace key for duplicate detection (e.g. project id) */
+  dupCheckKey?: string;
 }
 
-export function ImageUploadSlot({ value, onChange, fileId, label, aspectRatio = '1', slotWidth = 100, onUploaded }: ImageUploadSlotProps) {
+// Module-level hash registry keyed by dupCheckKey
+const uploadedHashRegistry = new Map<string, Set<string>>();
+
+async function hashFile(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer();
+  const hashBuf = await crypto.subtle.digest('SHA-256', buffer);
+  return Array.from(new Uint8Array(hashBuf))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function isDuplicate(hash: string, key: string): boolean {
+  return uploadedHashRegistry.get(key)?.has(hash) ?? false;
+}
+
+function registerHash(hash: string, key: string) {
+  if (!uploadedHashRegistry.has(key)) uploadedHashRegistry.set(key, new Set());
+  uploadedHashRegistry.get(key)!.add(hash);
+}
+
+export function ImageUploadSlot({ value, onChange, fileId, label, aspectRatio = '1', slotWidth = 100, onUploaded, dupCheckKey }: ImageUploadSlotProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [uploading, setUploading] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState(false);
+  const pendingFileRef = useRef<{ file: File; hash: string } | null>(null);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const processFile = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Только изображения');
+      return;
+    }
     setUploadError(null);
+    setDuplicateWarning(false);
+
+    if (dupCheckKey) {
+      const hash = await hashFile(file);
+      if (isDuplicate(hash, dupCheckKey)) {
+        pendingFileRef.current = { file, hash };
+        setDuplicateWarning(true);
+        return;
+      }
+      pendingFileRef.current = { file, hash };
+    } else {
+      pendingFileRef.current = { file, hash: '' };
+    }
+
+    await doUpload(file, dupCheckKey ? pendingFileRef.current!.hash : undefined);
+  };
+
+  const doUpload = async (file: File, hash?: string) => {
+    setDuplicateWarning(false);
     setUploading(true);
     try {
       const meta = await uploadFileWithMeta(file);
       onChange(meta.url);
       if (onUploaded) onUploaded(meta);
-      if (inputRef.current) inputRef.current.value = '';
+      if (hash && dupCheckKey) registerHash(hash, dupCheckKey);
     } catch (err) {
       console.error(err);
       setUploadError(err instanceof Error ? err.message : 'Ошибка загрузки');
     } finally {
       setUploading(false);
+      pendingFileRef.current = null;
+      if (inputRef.current) inputRef.current.value = '';
     }
   };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await processFile(file);
+  };
+
+  const handlePaste = async (e: ClipboardEvent) => {
+    if (value || uploading || removing) return;
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of Array.from(items)) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) await processFile(file);
+        break;
+      }
+    }
+  };
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const onDocPaste = (e: ClipboardEvent) => {
+      // Only handle if this slot is visible and doesn't have a value
+      if (!value && !uploading) handlePaste(e);
+    };
+
+    document.addEventListener('paste', onDocPaste);
+    return () => document.removeEventListener('paste', onDocPaste);
+  }, [value, uploading]);
 
   const handleRemove = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -52,16 +133,21 @@ export function ImageUploadSlot({ value, onChange, fileId, label, aspectRatio = 
       }
     }
     onChange(null);
-    if (inputRef.current) {
-      inputRef.current.value = '';
-    }
+    if (inputRef.current) inputRef.current.value = '';
+  };
+
+  const handleConfirmDuplicate = async () => {
+    if (!pendingFileRef.current) return;
+    const { file, hash } = pendingFileRef.current;
+    await doUpload(file, hash);
   };
 
   return (
     <div className="flex flex-col gap-2">
       {label && <label className="text-sm font-medium">{label}</label>}
       <div
-        onClick={() => !uploading && !removing && inputRef.current?.click()}
+        ref={containerRef}
+        onClick={() => !uploading && !removing && !duplicateWarning && inputRef.current?.click()}
         className={`relative bg-[#1a1a1a] border-2 border-dashed border-[#2a2a2a] rounded-lg overflow-hidden transition-colors group ${uploading || removing ? 'cursor-wait opacity-70' : 'cursor-pointer hover:border-[#3a3a3a]'}`}
         style={{ width: slotWidth, aspectRatio, flexShrink: 0 }}
       >
@@ -69,6 +155,26 @@ export function ImageUploadSlot({ value, onChange, fileId, label, aspectRatio = 
           <div className="flex flex-col items-center justify-center h-full text-[#a1a1a1]">
             <Loader2 className="h-8 w-8 mb-2 animate-spin" />
             <span className="text-sm">{removing ? 'Удаление...' : 'Загрузка...'}</span>
+          </div>
+        ) : duplicateWarning ? (
+          <div className="flex flex-col items-center justify-center h-full gap-3 p-4 text-center">
+            <span className="text-sm text-yellow-400">Это изображение уже загружалось</span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); handleConfirmDuplicate(); }}
+                className="px-3 py-1.5 text-xs bg-white text-black rounded-lg font-medium hover:bg-gray-100"
+              >
+                Загрузить
+              </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setDuplicateWarning(false); pendingFileRef.current = null; }}
+                className="px-3 py-1.5 text-xs bg-[#2a2a2a] text-white rounded-lg hover:bg-[#3a3a3a]"
+              >
+                Отмена
+              </button>
+            </div>
           </div>
         ) : value ? (
           <>
@@ -83,9 +189,10 @@ export function ImageUploadSlot({ value, onChange, fileId, label, aspectRatio = 
             </button>
           </>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-[#6b6b6b] group-hover:text-[#a1a1a1] transition-colors">
-            <Upload className="h-8 w-8 mb-2" />
+          <div className="flex flex-col items-center justify-center h-full text-[#6b6b6b] group-hover:text-[#a1a1a1] transition-colors gap-1">
+            <Upload className="h-8 w-8 mb-1" />
             <span className="text-sm">Загрузить</span>
+            <span className="text-xs opacity-60 flex items-center gap-1"><ClipboardPaste className="h-3 w-3" /> или вставить Cmd+V</span>
           </div>
         )}
         {uploadError && (

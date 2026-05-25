@@ -21,6 +21,7 @@ export interface Screen {
   scenarioIds: string[];
   uiElementIds: string[];
   patternIds: string[];
+  isMarked: boolean;
   createdAt: Date;
 }
 

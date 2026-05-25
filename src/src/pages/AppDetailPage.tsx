@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
-import { ArrowLeft, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Circle, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { fetchProject } from '../lib/api/projectsApi';
 import { fetchScreensCategories } from '../lib/api/screensCategoriesApi';
 import { fetchScenarioCategories, deleteScenarioCategory, type ScenarioCategoryItem } from '../lib/api/scenarioCategoriesApi';
@@ -162,6 +162,15 @@ export function AppDetailPage() {
   const [deleteScenarioCategoryId, setDeleteScenarioCategoryId] = useState<string | null>(null);
   const [deletingScenarioCategory, setDeletingScenarioCategory] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [filterUnmarked, setFilterUnmarked] = useState(false);
+  const [filterNoPattern, setFilterNoPattern] = useState(false);
+  const [filterNoScenario, setFilterNoScenario] = useState(false);
+  const [filterNoUI, setFilterNoUI] = useState(false);
+  const [sidebarSearch, setSidebarSearch] = useState('');
+  const [scenarioScreensOrder, setScenarioScreensOrder] = useState<Record<string, string[]>>({});
+  const [editingScreenId, setEditingScreenId] = useState<string | null>(null);
+  const [editCategoryId, setEditCategoryId] = useState<string>('');
+  const [savingScreenId, setSavingScreenId] = useState<string | null>(null);
   const [scenariosList, setScenariosList] = useState<ScenarioCategoryWithScenarios[]>([]);
   const [scenariosLoading, setScenariosLoading] = useState(false);
   const [scenarioModalOpen, setScenarioModalOpen] = useState(false);
@@ -227,9 +236,14 @@ export function AppDetailPage() {
     return counts;
   };
 
-  const filteredScreens = categoryFilter
-    ? screens.filter(s => s.categoryId === categoryFilter)
-    : screens;
+  const filteredScreens = screens.filter(s => {
+    if (categoryFilter && s.categoryId !== categoryFilter) return false;
+    if (filterUnmarked && s.isMarked) return false;
+    if (filterNoPattern && s.categoryId) return false;
+    if (filterNoScenario && s.scenarioIds.length > 0) return false;
+    if (filterNoUI && s.uiElementIds.length > 0) return false;
+    return true;
+  });
 
   const scenarioCategoriesFlat = useMemo(
     () =>
@@ -245,6 +259,17 @@ export function AppDetailPage() {
   const scenarioCategoryTree = useMemo(
     () => buildScenarioTree(scenarioCategoriesFlat),
     [scenarioCategoriesFlat]
+  );
+
+  const filteredScenarioCategoriesFlat = useMemo(() => {
+    if (!sidebarSearch.trim()) return scenarioCategoriesFlat;
+    const q = sidebarSearch.toLowerCase();
+    return scenarioCategoriesFlat.filter((c) => c.name.toLowerCase().includes(q));
+  }, [scenarioCategoriesFlat, sidebarSearch]);
+
+  const filteredScenarioCategoryTree = useMemo(
+    () => buildScenarioTree(filteredScenarioCategoriesFlat),
+    [filteredScenarioCategoriesFlat]
   );
 
   const filterCategoriesByApp = (data: ScenarioCategoryItem[]) =>
@@ -290,13 +315,15 @@ export function AppDetailPage() {
     return counts;
   }, [screens]);
 
-  const scenarioScreens = useMemo(
-    () =>
-      scenarioCategoryFilter
-        ? screens.filter((s) => s.scenarioIds.includes(scenarioCategoryFilter))
-        : [],
-    [screens, scenarioCategoryFilter]
-  );
+  const scenarioScreens = useMemo(() => {
+    if (!scenarioCategoryFilter) return [];
+    const filtered = screens.filter((s) => s.scenarioIds.includes(scenarioCategoryFilter));
+    const order = scenarioScreensOrder[scenarioCategoryFilter];
+    if (!order?.length) return [...filtered].reverse();
+    const ordered = order.map((id) => filtered.find((s) => s.id === id)).filter(Boolean) as Screen[];
+    const rest = [...filtered.filter((s) => !order.includes(s.id))].reverse();
+    return [...ordered, ...rest];
+  }, [screens, scenarioCategoryFilter, scenarioScreensOrder]);
 
   const selectedCategoryName = useMemo(
     () =>
@@ -316,6 +343,10 @@ export function AppDetailPage() {
           : s
       )
     );
+    setScenarioScreensOrder((prev) => ({
+      ...prev,
+      [catId]: [...addedIds, ...(prev[catId] ?? []).filter((id) => !addedIds.includes(id))],
+    }));
   };
 
   const handleRemoveScreenConfirm = async () => {
@@ -351,6 +382,38 @@ export function AppDetailPage() {
       console.error(e);
     } finally {
       setDeletingScenarioCategory(false);
+    }
+  };
+
+  const handleToggleMark = async (e: React.MouseEvent, screen: Screen) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const newMarked = !screen.isMarked;
+    setScreens(prev => prev.map(s => s.id === screen.id ? { ...s, isMarked: newMarked } : s));
+    try {
+      await updateAdminScreen(screen.id, { is_marked: newMarked });
+    } catch {
+      setScreens(prev => prev.map(s => s.id === screen.id ? { ...s, isMarked: !newMarked } : s));
+    }
+  };
+
+  const handleOpenEdit = (e: React.MouseEvent, screen: Screen) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditingScreenId(screen.id);
+    setEditCategoryId(screen.categoryId);
+  };
+
+  const handleSaveEdit = async (screenId: string) => {
+    setSavingScreenId(screenId);
+    try {
+      await updateAdminScreen(screenId, { screens_category_id: editCategoryId });
+      setScreens(prev => prev.map(s => s.id === screenId ? { ...s, categoryId: editCategoryId } : s));
+      setEditingScreenId(null);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSavingScreenId(null);
     }
   };
 
@@ -447,35 +510,77 @@ export function AppDetailPage() {
       {activeTab === 'screens' && (
         <div className="flex gap-6">
           {/* Sidebar Filter */}
-          <div className="w-64 flex-shrink-0">
+          <div className="w-72 flex-shrink-0">
             <div className="bg-[#141414] border border-[#2a2a2a] rounded-xl p-4">
-              <h3 className="font-medium mb-4">Категории</h3>
-              <div className="space-y-1">
+              <div className="space-y-1 mb-4">
+                <p className="text-xs text-[#6b6b6b] px-1 mb-2">Быстрые фильтры</p>
                 <button
-                  onClick={() => setCategoryFilter(null)}
+                  onClick={() => { setFilterUnmarked(f => !f); setCategoryFilter(null); }}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
-                    categoryFilter === null
-                      ? 'bg-[#a3e635] text-black font-medium'
-                      : 'text-[#a1a1a1] hover:bg-[#1a1a1a]'
+                    filterUnmarked ? 'bg-blue-500/20 text-blue-300 font-medium' : 'text-[#a1a1a1] hover:bg-[#1a1a1a]'
                   }`}
                 >
-                  <span>Все</span>
-                  <span>{screens.length}</span>
+                  <span>Не размечены</span>
+                  <span>{screens.filter(s => !s.isMarked).length}</span>
                 </button>
-                {screenCategories.map((category) => (
+                <button
+                  onClick={() => { setFilterNoPattern(f => !f); setCategoryFilter(null); }}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
+                    filterNoPattern ? 'bg-orange-500/20 text-orange-300 font-medium' : 'text-[#a1a1a1] hover:bg-[#1a1a1a]'
+                  }`}
+                >
+                  <span>Без паттернов</span>
+                  <span>{screens.filter(s => !s.categoryId).length}</span>
+                </button>
+                <button
+                  onClick={() => { setFilterNoScenario(f => !f); setCategoryFilter(null); }}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
+                    filterNoScenario ? 'bg-purple-500/20 text-purple-300 font-medium' : 'text-[#a1a1a1] hover:bg-[#1a1a1a]'
+                  }`}
+                >
+                  <span>Без сценариев</span>
+                  <span>{screens.filter(s => s.scenarioIds.length === 0).length}</span>
+                </button>
+                <button
+                  onClick={() => { setFilterNoUI(f => !f); setCategoryFilter(null); }}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
+                    filterNoUI ? 'bg-yellow-500/20 text-yellow-300 font-medium' : 'text-[#a1a1a1] hover:bg-[#1a1a1a]'
+                  }`}
+                >
+                  <span>Без UI элементов</span>
+                  <span>{screens.filter(s => s.uiElementIds.length === 0).length}</span>
+                </button>
+              </div>
+
+              <div className="pt-4 border-t border-[#2a2a2a]">
+                <h3 className="font-medium mb-3 text-sm text-[#a1a1a1]">Паттерны</h3>
+                <div className="space-y-1">
                   <button
-                    key={category.id}
-                    onClick={() => setCategoryFilter(category.id)}
+                    onClick={() => { setCategoryFilter(null); setFilterUnmarked(false); setFilterNoPattern(false); setFilterNoScenario(false); setFilterNoUI(false); }}
                     className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
-                      categoryFilter === category.id
+                      categoryFilter === null && !filterUnmarked && !filterNoPattern && !filterNoScenario && !filterNoUI
                         ? 'bg-[#a3e635] text-black font-medium'
                         : 'text-[#a1a1a1] hover:bg-[#1a1a1a]'
                     }`}
                   >
-                    <span>{category.name}</span>
-                    <span>{categoryCounts[category.id] || 0}</span>
+                    <span>Все</span>
+                    <span>{screens.length}</span>
                   </button>
-                ))}
+                  {screenCategories.map((category) => (
+                    <button
+                      key={category.id}
+                      onClick={() => { setCategoryFilter(category.id); setFilterUnmarked(false); setFilterNoPattern(false); setFilterNoScenario(false); setFilterNoUI(false); }}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
+                        categoryFilter === category.id
+                          ? 'bg-[#a3e635] text-black font-medium'
+                          : 'text-[#a1a1a1] hover:bg-[#1a1a1a]'
+                      }`}
+                    >
+                      <span className="truncate text-left">{category.name}</span>
+                      <span className="flex-shrink-0 ml-2">{categoryCounts[category.id] || 0}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -511,24 +616,79 @@ export function AppDetailPage() {
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {filteredScreens.map((screen) => (
-                  <Link
+                  <div
                     key={screen.id}
-                    to={`/screens/${screen.id}`}
-                    className="group bg-[#141414] border border-[#2a2a2a] rounded-xl overflow-hidden hover:border-[#3a3a3a] transition-all hover:shadow-soft"
+                    className={`group bg-[#141414] border rounded-xl overflow-hidden transition-all hover:shadow-soft ${
+                      screen.isMarked ? 'border-[#a3e635]/40' : 'border-[#2a2a2a] hover:border-[#3a3a3a]'
+                    }`}
                   >
-                    <div className="aspect-[9/16] bg-[#1a1a1a]">
+                    {/* Image — click to navigate */}
+                    <Link to={`/screens/${screen.id}`} className="block relative aspect-[9/16] bg-[#1a1a1a]">
                       <img
                         src={screen.imageUrl}
                         alt="Screen"
                         className="w-full h-full object-cover"
                       />
-                    </div>
-                    <div className="p-3">
-                      <p className="text-xs text-[#a1a1a1]">
-                        {getCategory(screen.categoryId)?.name}
+                      {/* Mark toggle button */}
+                      <button
+                        type="button"
+                        onClick={(e) => handleToggleMark(e, screen)}
+                        title={screen.isMarked ? 'Снять отметку' : 'Отметить как размеченный'}
+                        className="absolute top-2 right-2 p-1 rounded-full bg-black/60 hover:bg-black/80 transition-colors"
+                      >
+                        {screen.isMarked
+                          ? <CheckCircle2 className="h-4 w-4 text-[#a3e635]" />
+                          : <Circle className="h-4 w-4 text-white/40" />
+                        }
+                      </button>
+                    </Link>
+                    {/* Bottom bar */}
+                    <div className="p-2 flex items-center justify-between gap-1">
+                      <p className="text-xs text-[#a1a1a1] truncate flex-1 min-w-0">
+                        {getCategory(screen.categoryId)?.name ?? <span className="text-orange-400/70">Без категории</span>}
                       </p>
+                      <button
+                        type="button"
+                        onClick={(e) => handleOpenEdit(e, screen)}
+                        title="Быстро изменить категорию"
+                        className="flex-shrink-0 p-1 rounded hover:bg-[#2a2a2a] text-[#6b6b6b] hover:text-white transition-colors"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
                     </div>
-                  </Link>
+                    {/* Inline quick-edit panel */}
+                    {editingScreenId === screen.id && (
+                      <div className="border-t border-[#2a2a2a] p-2 space-y-2 bg-[#1a1a1a]" onClick={(e) => e.stopPropagation()}>
+                        <select
+                          value={editCategoryId}
+                          onChange={(e) => setEditCategoryId(e.target.value)}
+                          className="w-full px-2 py-1.5 text-xs bg-[#141414] border border-[#2a2a2a] rounded-lg focus:outline-none focus:border-[#a3e635]"
+                        >
+                          <option value="">— без категории —</option>
+                          {screenCategories.map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                        <div className="flex gap-1">
+                          <button
+                            type="button"
+                            disabled={savingScreenId === screen.id}
+                            onClick={() => handleSaveEdit(screen.id)}
+                            className="flex-1 py-1 text-xs bg-[#a3e635] text-black font-medium rounded-lg hover:bg-[#b8ec44] disabled:opacity-50"
+                          >
+                            {savingScreenId === screen.id ? '...' : 'Сохранить'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingScreenId(null)}
+                            className="px-2 py-1 text-xs bg-[#2a2a2a] text-white rounded-lg hover:bg-[#3a3a3a]"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
             )}
@@ -540,7 +700,7 @@ export function AppDetailPage() {
       {activeTab === 'scenarios' && (
         <div className="flex gap-6 items-start">
           {/* Left: tree sidebar */}
-          <div className="w-64 flex-shrink-0">
+          <div className="w-72 flex-shrink-0">
             <div
               className="sticky overflow-y-auto rounded-xl border border-[#2a2a2a] bg-[#141414] p-4"
               style={{ top: 20, maxHeight: 'calc(100vh - 160px)' }}
@@ -562,13 +722,33 @@ export function AppDetailPage() {
                 </button>
               </div>
 
-              {scenarioCategoryTree.length === 0 ? (
+              {/* Search */}
+              <div className="relative mb-3">
+                <input
+                  type="text"
+                  value={sidebarSearch}
+                  onChange={(e) => setSidebarSearch(e.target.value)}
+                  placeholder="Поиск сценария..."
+                  className="w-full pl-3 pr-8 py-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg text-xs focus:outline-none focus:border-[#a3e635] transition-colors placeholder:text-[#6b6b6b]"
+                />
+                {sidebarSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setSidebarSearch('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[#6b6b6b] hover:text-white"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {filteredScenarioCategoryTree.length === 0 ? (
                 <p className="text-xs text-[#6b6b6b] text-center py-4">
-                  Нет категорий
+                  {sidebarSearch ? 'Ничего не найдено' : 'Нет категорий'}
                 </p>
               ) : (
                 <div className="space-y-0.5">
-                  {scenarioCategoryTree.map((node) => (
+                  {filteredScenarioCategoryTree.map((node) => (
                     <ScenarioCategoryTreeItem
                       key={node.id}
                       node={node}
