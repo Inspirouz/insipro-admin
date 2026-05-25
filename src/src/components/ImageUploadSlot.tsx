@@ -10,11 +10,12 @@ interface ImageUploadSlotProps {
   fileId?: string | null;
   label?: string;
   aspectRatio?: string;
+  slotWidth?: number;
   /** Optional callback with full upload meta (id + url/path) */
   onUploaded?: (meta: UploadedFileMeta) => void;
 }
 
-export function ImageUploadSlot({ value, onChange, fileId, label, aspectRatio = '16/9', onUploaded }: ImageUploadSlotProps) {
+export function ImageUploadSlot({ value, onChange, fileId, label, aspectRatio = '1', slotWidth = 100, onUploaded }: ImageUploadSlotProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [removing, setRemoving] = useState(false);
@@ -61,8 +62,8 @@ export function ImageUploadSlot({ value, onChange, fileId, label, aspectRatio = 
       {label && <label className="text-sm font-medium">{label}</label>}
       <div
         onClick={() => !uploading && !removing && inputRef.current?.click()}
-        className={`w-[100px] h-[100px] relative bg-[#1a1a1a] border-2 border-dashed border-[#2a2a2a] rounded-lg overflow-hidden transition-colors group ${uploading || removing ? 'cursor-wait opacity-70' : 'cursor-pointer hover:border-[#3a3a3a]'}`}
-        style={{ aspectRatio }}
+        className={`relative bg-[#1a1a1a] border-2 border-dashed border-[#2a2a2a] rounded-lg overflow-hidden transition-colors group ${uploading || removing ? 'cursor-wait opacity-70' : 'cursor-pointer hover:border-[#3a3a3a]'}`}
+        style={{ width: slotWidth, aspectRatio, flexShrink: 0 }}
       >
         {uploading || removing ? (
           <div className="flex flex-col items-center justify-center h-full text-[#a1a1a1]">

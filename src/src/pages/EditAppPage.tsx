@@ -145,14 +145,15 @@ export function EditAppPage() {
             <ImageUploadSlot
               value={formData.iconUrl}
               onChange={(url) => setFormData(prev => ({ ...prev, iconUrl: url }))}
-              label="Иконка приложеня"
+              label="Иконка приложения"
               aspectRatio="1"
+              slotWidth={120}
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium mb-3">Превью (до 5 изображений)</label>
-            <div className="grid grid-cols-5 gap-4">
+            <div className="flex gap-4 flex-wrap">
               {formData.previewUrls.map((url, index) => (
                 <ImageUploadSlot
                   key={index}
@@ -163,6 +164,7 @@ export function EditAppPage() {
                     setFormData(prev => ({ ...prev, previewUrls: newPreviews }));
                   }}
                   aspectRatio="9/16"
+                  slotWidth={80}
                 />
               ))}
             </div>

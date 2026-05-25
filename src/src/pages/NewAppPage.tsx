@@ -81,7 +81,7 @@ export function NewAppPage() {
           <div>
             <h2 className="text-lg font-semibold mb-4">Добавить превью</h2>
             <div className="rounded-2xl border border-[#2a2a2a] bg-[#141414] px-6 py-6">
-              <div className="grid grid-cols-5 gap-4">
+              <div className="flex gap-4 flex-wrap">
                 {formData.previewUrls.map((url, index) => (
                   <ImageUploadSlot
                     key={index}
@@ -92,6 +92,7 @@ export function NewAppPage() {
                       setFormData(prev => ({ ...prev, previewUrls: newPreviews }));
                     }}
                     aspectRatio="9/16"
+                    slotWidth={80}
                   />
                 ))}
               </div>
@@ -100,12 +101,13 @@ export function NewAppPage() {
 
           {/* Logo + main info */}
           <div className="grid gap-6 md:grid-cols-[minmax(0,220px)_minmax(0,1fr)] items-stretch mb-4">
-            <div className="flex md:block w-24">
+            <div className="flex md:block">
               <ImageUploadSlot
                 value={formData.iconUrl}
                 onChange={(url) => setFormData(prev => ({ ...prev, iconUrl: url }))}
                 label="Добавить лого"
                 aspectRatio="1"
+                slotWidth={120}
               />
             </div>
             <div className="space-y-6">
