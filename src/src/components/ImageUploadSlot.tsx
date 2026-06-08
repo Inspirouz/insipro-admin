@@ -1,23 +1,27 @@
 import { Upload, X, Loader2, ClipboardPaste } from 'lucide-react';
 import { useRef, useState, useEffect } from 'react';
-import { uploadFile, uploadFileWithMeta, deleteFile, UploadedFileMeta } from '../lib/api/fileApi';
+import { uploadFileWithMeta, deleteFile, UploadedFileMeta } from '../lib/api/fileApi';
 import { getProjectImageUrl } from '../lib/api/projectsApi';
+
+const VIDEO_EXTS = /\.(mp4|webm|mov|ogg|quicktime|x-msvideo|x-matroska)(\?.*)?$/i;
+function isVideoUrl(url: string): boolean {
+  if (!url) return false;
+  if (/\/video__[^/]+$/i.test(url)) return true;
+  return VIDEO_EXTS.test(url);
+}
 
 interface ImageUploadSlotProps {
   value: string | null;
   onChange: (url: string | null) => void;
-  /** Optional file id for DELETE /api/file/{id} when user removes image */
   fileId?: string | null;
   label?: string;
   aspectRatio?: string;
   slotWidth?: number;
-  /** Optional callback with full upload meta (id + url/path) */
   onUploaded?: (meta: UploadedFileMeta) => void;
-  /** Namespace key for duplicate detection (e.g. project id) */
   dupCheckKey?: string;
+  accept?: string;
 }
 
-// Module-level hash registry keyed by dupCheckKey
 const uploadedHashRegistry = new Map<string, Set<string>>();
 
 async function hashFile(file: File): Promise<string> {
@@ -37,7 +41,7 @@ function registerHash(hash: string, key: string) {
   uploadedHashRegistry.get(key)!.add(hash);
 }
 
-export function ImageUploadSlot({ value, onChange, fileId, label, aspectRatio = '1', slotWidth = 100, onUploaded, dupCheckKey }: ImageUploadSlotProps) {
+export function ImageUploadSlot({ value, onChange, fileId, label, aspectRatio = '1', slotWidth = 100, onUploaded, dupCheckKey, accept = 'image/*' }: ImageUploadSlotProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -46,15 +50,21 @@ export function ImageUploadSlot({ value, onChange, fileId, label, aspectRatio = 
   const [duplicateWarning, setDuplicateWarning] = useState(false);
   const pendingFileRef = useRef<{ file: File; hash: string } | null>(null);
 
+  const allowsVideo = accept.includes('video');
+  const isVideo = value ? isVideoUrl(value) : false;
+  const resolvedSrc = value ? (getProjectImageUrl(value) || value) : null;
+
   const processFile = async (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      setUploadError('Только изображения');
+    const isVideoFile = file.type.startsWith('video/');
+    const isImageFile = file.type.startsWith('image/');
+    if (!isImageFile && !(allowsVideo && isVideoFile)) {
+      setUploadError(allowsVideo ? 'Только изображения или видео' : 'Только изображения');
       return;
     }
     setUploadError(null);
     setDuplicateWarning(false);
 
-    if (dupCheckKey) {
+    if (dupCheckKey && isImageFile) {
       const hash = await hashFile(file);
       if (isDuplicate(hash, dupCheckKey)) {
         pendingFileRef.current = { file, hash };
@@ -66,7 +76,7 @@ export function ImageUploadSlot({ value, onChange, fileId, label, aspectRatio = 
       pendingFileRef.current = { file, hash: '' };
     }
 
-    await doUpload(file, dupCheckKey ? pendingFileRef.current!.hash : undefined);
+    await doUpload(file, dupCheckKey && isImageFile ? pendingFileRef.current!.hash : undefined);
   };
 
   const doUpload = async (file: File, hash?: string) => {
@@ -108,14 +118,9 @@ export function ImageUploadSlot({ value, onChange, fileId, label, aspectRatio = 
   };
 
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
     const onDocPaste = (e: ClipboardEvent) => {
-      // Only handle if this slot is visible and doesn't have a value
       if (!value && !uploading) handlePaste(e);
     };
-
     document.addEventListener('paste', onDocPaste);
     return () => document.removeEventListener('paste', onDocPaste);
   }, [value, uploading]);
@@ -176,9 +181,22 @@ export function ImageUploadSlot({ value, onChange, fileId, label, aspectRatio = 
               </button>
             </div>
           </div>
-        ) : value ? (
+        ) : resolvedSrc ? (
           <>
-            <img src={getProjectImageUrl(value) || value} alt="Preview" className="w-full h-full object-cover" />
+            {isVideo ? (
+              <video
+                src={resolvedSrc}
+                className="w-full h-full object-cover"
+                muted
+                loop
+                playsInline
+                onClick={(e) => e.stopPropagation()}
+                onMouseEnter={(e) => (e.currentTarget as HTMLVideoElement).play().catch(() => {})}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLVideoElement).pause(); }}
+              />
+            ) : (
+              <img src={resolvedSrc} alt="Preview" className="w-full h-full object-cover" />
+            )}
             <button
               type="button"
               onClick={handleRemove}
@@ -192,7 +210,9 @@ export function ImageUploadSlot({ value, onChange, fileId, label, aspectRatio = 
           <div className="flex flex-col items-center justify-center h-full text-[#6b6b6b] group-hover:text-[#a1a1a1] transition-colors gap-1">
             <Upload className="h-8 w-8 mb-1" />
             <span className="text-sm">Загрузить</span>
-            <span className="text-xs opacity-60 flex items-center gap-1"><ClipboardPaste className="h-3 w-3" /> или вставить Cmd+V</span>
+            {!allowsVideo && (
+              <span className="text-xs opacity-60 flex items-center gap-1"><ClipboardPaste className="h-3 w-3" /> или вставить Cmd+V</span>
+            )}
           </div>
         )}
         {uploadError && (
@@ -203,7 +223,7 @@ export function ImageUploadSlot({ value, onChange, fileId, label, aspectRatio = 
         <input
           ref={inputRef}
           type="file"
-          accept="image/*"
+          accept={accept}
           onChange={handleFileChange}
           className="hidden"
         />

@@ -207,6 +207,7 @@ export function ScreenDetailPage() {
             onUploaded={(meta) => { if (meta.id) setImageIds([meta.id]); }}
             label="Изображение экрана"
             aspectRatio="9/16"
+            accept="image/*,video/*"
           />
         </div>
 
