@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Copy } from 'lucide-react';
 import { apiClient } from '../lib/api';
 import { fetchTags, createTag } from '../lib/api/tagsApi';
 import { fetchScreensCategories, createScreenCategory } from '../lib/api/screensCategoriesApi';
 import { fetchScenarioCategories } from '../lib/api/scenarioCategoriesApi';
-import { createAdminScreen } from '../lib/api/adminScreensApi';
-import type { TaxonomyItem, Scenario } from '../lib/types';
+import { createAdminScreen, fetchAdminScreens } from '../lib/api/adminScreensApi';
+import type { TaxonomyItem, Scenario, Screen } from '../lib/types';
 import { PageHeader } from '../components/PageHeader';
 import { ImageUploadSlot } from '../components/ImageUploadSlot';
 import { MultiSelectField } from '../components/MultiSelectField';
 import { AddTaxonomyDialog } from '../components/AddTaxonomyDialog';
+import { AddScenarioCategoryModal } from '../components/AddScenarioCategoryModal';
 
 function tagToTaxonomy(tag: { id: string; name: string }, type: TaxonomyItem['type']): TaxonomyItem {
   return { id: tag.id, name: tag.name, type };
@@ -24,8 +25,10 @@ export function NewScreenPage() {
   const [screenCategories, setScreenCategories] = useState<TaxonomyItem[]>([]);
   const [uiElements, setUiElements] = useState<TaxonomyItem[]>([]);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
+  const [lastScreen, setLastScreen] = useState<Screen | null>(null);
   const [addPatternOpen, setAddPatternOpen] = useState(false);
   const [addUiElementOpen, setAddUiElementOpen] = useState(false);
+  const [addScenarioOpen, setAddScenarioOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     imageUrl: null as string | null,
@@ -41,36 +44,74 @@ export function NewScreenPage() {
   }, []);
 
   const loadData = async () => {
-    const [screenCategoriesData, uiData, scenarioCategories] = await Promise.all([
+    const [screenCategoriesData, uiData, projectScenarios, allScenarios, screens] = await Promise.all([
       fetchScreensCategories(),
       fetchTags('ui').then((tags) => tags.map((t) => tagToTaxonomy(t, 'uiElement'))),
       fetchScenarioCategories(undefined, appId),
+      fetchScenarioCategories(),
+      appId ? fetchAdminScreens(appId) : Promise.resolve([] as Screen[]),
     ]);
-    const categoriesData: TaxonomyItem[] = screenCategoriesData.map((c) => ({
-      id: c.id,
-      name: c.name,
-      type: 'screenCategory',
-    }));
-    setScreenCategories(categoriesData);
+
+    setScreenCategories(
+      screenCategoriesData.map((c) => ({ id: c.id, name: c.name, type: 'screenCategory' as const }))
+    );
     setUiElements(uiData);
-    const filteredScenarios = scenarioCategories.filter(
-      (c) => !c.project_id || c.project_id === appId
-    );
-    setScenarios(
-      filteredScenarios.map((c) => ({
-        id: c.id,
-        name: c.name,
-        parentId: c.parent_id ?? undefined,
-      }))
-    );
-    if (categoriesData.length > 0) {
-      setFormData(prev => ({ ...prev, categoryIds: [categoriesData[0].id] }));
+
+    const localIds = new Set(projectScenarios.filter((c) => c.project_id === appId).map((c) => c.id));
+    const local = projectScenarios
+      .filter((c) => c.project_id === appId)
+      .map((c) => ({ id: c.id, name: c.name, parentId: c.parent_id ?? undefined }));
+    const base = allScenarios
+      .filter((c) => !c.project_id && !localIds.has(c.id))
+      .map((c) => ({ id: c.id, name: c.name, parentId: c.parent_id ?? undefined }));
+    setScenarios([...local, ...base]);
+
+    if (screens.length > 0) {
+      const sorted = [...screens].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      setLastScreen(sorted[0]);
     }
+  };
+
+  const refreshScenarios = async () => {
+    if (!appId) return;
+    try {
+      const [projectScenarios, allScenarios] = await Promise.all([
+        fetchScenarioCategories(undefined, appId),
+        fetchScenarioCategories(),
+      ]);
+      const localIds = new Set(projectScenarios.filter((c) => c.project_id === appId).map((c) => c.id));
+      const local = projectScenarios
+        .filter((c) => c.project_id === appId)
+        .map((c) => ({ id: c.id, name: c.name, parentId: c.parent_id ?? undefined }));
+      const base = allScenarios
+        .filter((c) => !c.project_id && !localIds.has(c.id))
+        .map((c) => ({ id: c.id, name: c.name, parentId: c.parent_id ?? undefined }));
+      setScenarios([...local, ...base]);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const borrowTags = () => {
+    if (!lastScreen) return;
+    setFormData((prev) => ({
+      ...prev,
+      categoryIds: lastScreen.categoryId ? [lastScreen.categoryId] : [],
+      scenarioIds: lastScreen.scenarioIds,
+      uiElementIds: lastScreen.uiElementIds,
+      patternIds: lastScreen.patternIds,
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!appId) return;
+    if (formData.scenarioIds.length === 0) {
+      alert('Выберите хотя бы один сценарий');
+      return;
+    }
     if (!formData.imageUrl) {
       alert('Загрузите изображение экрана');
       return;
@@ -80,7 +121,7 @@ export function NewScreenPage() {
     try {
       await createAdminScreen({
         project_id: appId,
-        screens_category_id: formData.categoryIds[0] ?? '',
+        ...(formData.categoryIds[0] ? { screens_category_id: formData.categoryIds[0] } : {}),
         imageIds: formData.imageId ? [formData.imageId] : [],
         senarys: formData.scenarioIds,
         ui_elements: formData.uiElementIds,
@@ -130,6 +171,12 @@ export function NewScreenPage() {
         onSave={handleAddUiElement}
         title="Добавить UI элемент"
       />
+      <AddScenarioCategoryModal
+        isOpen={addScenarioOpen}
+        onClose={() => setAddScenarioOpen(false)}
+        projectId={appId ?? ''}
+        onSuccess={refreshScenarios}
+      />
       <Link
         to={`/apps/${appId}`}
         className="inline-flex items-center gap-2 text-[#a1a1a1] hover:text-white transition-colors mb-6"
@@ -138,7 +185,19 @@ export function NewScreenPage() {
         Назад к приложению
       </Link>
 
-      <PageHeader title="Добавить экран" />
+      <div className="flex items-center justify-between mb-6">
+        <PageHeader title="Добавить экран" />
+        {lastScreen && (
+          <button
+            type="button"
+            onClick={borrowTags}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#1a1a1a] border border-[#2a2a2a] text-sm text-[#a1a1a1] rounded-lg hover:text-white hover:border-[#a3e635] transition-colors"
+          >
+            <Copy className="h-4 w-4" />
+            Заимствовать теги предыдущего экрана
+          </button>
+        )}
+      </div>
 
       <form onSubmit={handleSubmit} className="max-w-4xl">
         <div className="bg-[#141414] border border-[#2a2a2a] rounded-xl p-6 space-y-6">
@@ -170,6 +229,7 @@ dupCheckKey={appId}
             items={scenarios}
             selectedIds={formData.scenarioIds}
             onChange={(ids) => setFormData(prev => ({ ...prev, scenarioIds: ids }))}
+            onAddNew={() => setAddScenarioOpen(true)}
           />
 
           {/* UI Elements */}
@@ -180,7 +240,6 @@ dupCheckKey={appId}
             onChange={(ids) => setFormData(prev => ({ ...prev, uiElementIds: ids }))}
             onAddNew={() => setAddUiElementOpen(true)}
           />
-
         </div>
 
         {/* Actions */}

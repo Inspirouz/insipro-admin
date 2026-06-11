@@ -53,10 +53,11 @@ export function ScreenDetailPage() {
       const screen = await fetchAdminScreen(screenId);
       const projectId = searchParams.get('project_id') || screen.appId;
 
-      const [screenCategoriesData, uiData, scenarioCategories] = await Promise.all([
+      const [screenCategoriesData, uiData, projectScenarios, allScenarios] = await Promise.all([
         fetchScreensCategories(),
         fetchTags('ui').then((tags) => tags.map((t) => tagToTaxonomy(t, 'uiElement'))),
         fetchScenarioCategories(undefined, projectId),
+        fetchScenarioCategories(),
       ]);
 
       setImageUrl(screen.imageUrl);
@@ -66,12 +67,16 @@ export function ScreenDetailPage() {
         screenCategoriesData.map((c) => ({ id: c.id, name: c.name, type: 'screenCategory' as const }))
       );
       setUiElements(uiData);
-      const filteredScenarios = scenarioCategories.filter(
-        (c) => !c.project_id || c.project_id === projectId
-      );
-      setScenarios(
-        filteredScenarios.map((c) => ({ id: c.id, name: c.name, parentId: c.parent_id ?? undefined }))
-      );
+
+      const localIds = new Set(projectScenarios.filter((c) => c.project_id === projectId).map((c) => c.id));
+      const local = projectScenarios
+        .filter((c) => c.project_id === projectId)
+        .map((c) => ({ id: c.id, name: c.name, parentId: c.parent_id ?? undefined }));
+      const base = allScenarios
+        .filter((c) => !c.project_id && !localIds.has(c.id))
+        .map((c) => ({ id: c.id, name: c.name, parentId: c.parent_id ?? undefined }));
+      setScenarios([...local, ...base]);
+
       setFormData({
         categoryIds: screen.categoryId ? [screen.categoryId] : [],
         scenarioIds: screen.scenarioIds,
@@ -90,7 +95,7 @@ export function ScreenDetailPage() {
     setSaving(true);
     try {
       await updateAdminScreen(screenId, {
-        screens_category_id: formData.categoryIds[0] ?? '',
+        ...(formData.categoryIds[0] ? { screens_category_id: formData.categoryIds[0] } : {}),
         ...(imageIds.length > 0 && { imageIds }),
         senarys: formData.scenarioIds,
         ui_elements: formData.uiElementIds,
@@ -239,7 +244,6 @@ export function ScreenDetailPage() {
               onChange={(ids) => setFormData((prev) => ({ ...prev, uiElementIds: ids }))}
               onAddNew={() => setAddUiElementOpen(true)}
             />
-
           </div>
 
           {/* Actions */}

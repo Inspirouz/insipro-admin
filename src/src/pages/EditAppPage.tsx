@@ -165,6 +165,7 @@ export function EditAppPage() {
                   }}
                   aspectRatio="9/16"
                   slotWidth={80}
+                  accept="image/*,video/*"
                 />
               ))}
             </div>

@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, Circle, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Circle, GripVertical, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { fetchProject } from '../lib/api/projectsApi';
 import { fetchScreensCategories } from '../lib/api/screensCategoriesApi';
-import { fetchScenarioCategories, deleteScenarioCategory, type ScenarioCategoryItem } from '../lib/api/scenarioCategoriesApi';
+import { fetchScenarioCategories, deleteScenarioCategory, updateScenarioCategory, type ScenarioCategoryItem } from '../lib/api/scenarioCategoriesApi';
 import { fetchAdminScreens, updateAdminScreen } from '../lib/api/adminScreensApi';
 import { fetchAdminScenariosByProject, type ScenarioCategoryWithScenarios } from '../lib/api/scenariosApi';
 import { getProjectImageUrl } from '../lib/api/projectsApi';
@@ -32,8 +32,35 @@ function buildScenarioTree(items: ScenarioCategoryFlat[]): ScenarioCategoryNode[
   return roots;
 }
 
+function collectNodeIds(node: ScenarioCategoryNode): Set<string> {
+  const ids = new Set<string>([node.id]);
+  for (const child of node.children) {
+    for (const id of collectNodeIds(child)) ids.add(id);
+  }
+  return ids;
+}
+
+function findInTree(nodes: ScenarioCategoryNode[], id: string): ScenarioCategoryNode | null {
+  for (const n of nodes) {
+    if (n.id === id) return n;
+    const f = findInTree(n.children, id);
+    if (f) return f;
+  }
+  return null;
+}
+
+function InsertLine() {
+  return (
+    <div className="flex items-center pointer-events-none py-0.5">
+      <div className="w-2.5 h-2.5 rounded-full bg-[#a3e635] flex-shrink-0" />
+      <div className="flex-1 h-0.5 bg-[#a3e635]" />
+    </div>
+  );
+}
+
 function ScenarioCategoryTreeItem({
   node,
+  parentId,
   depth,
   selectedId,
   onSelect,
@@ -41,8 +68,12 @@ function ScenarioCategoryTreeItem({
   onEdit,
   onDelete,
   screenCountsMap,
+  draggingId,
+  insertPos,
+  onRowMouseDown,
 }: {
   node: ScenarioCategoryNode;
+  parentId: string | null;
   depth: number;
   selectedId: string | null;
   onSelect: (id: string) => void;
@@ -51,20 +82,43 @@ function ScenarioCategoryTreeItem({
   onDelete: (id: string) => void;
   screenCountsMap: Record<string, number>;
   isLast?: boolean;
+  draggingId: string | null;
+  insertPos: { targetId: string; mode: 'before' | 'after' | 'inside'; parentId: string | null } | null;
+  onRowMouseDown: (id: string, e: React.MouseEvent) => void;
 }) {
   const isSelected = selectedId === node.id;
   const hasChildren = node.children.length > 0;
   const count = screenCountsMap[node.id] ?? 0;
+  const isDragging = draggingId === node.id;
+  const isBefore = insertPos?.targetId === node.id && insertPos.mode === 'before';
+  const isAfter  = insertPos?.targetId === node.id && insertPos.mode === 'after';
+  const isInside = insertPos?.targetId === node.id && insertPos.mode === 'inside';
 
   return (
-    <div className="py-0.5">
+    <div style={{ paddingLeft: depth > 0 ? 12 + depth * 16 : 0 }}>
+      {isBefore && <InsertLine />}
+
       <div
-        style={{ paddingLeft: depth > 0 ? 12 + depth * 16 : 0 }}
-        className={`flex items-center rounded-md text-sm ${
-          isSelected ? 'bg-[#a3e635] text-black font-medium' : 'text-[#e5e5e5] hover:bg-[#1f1f1f]'
-        }`}
+        data-cat-id={node.id}
+        data-cat-parent-id={parentId ?? ''}
+        onMouseDown={(e) => {
+          const t = e.target as HTMLElement;
+          if (!t.closest('button')) onRowMouseDown(node.id, e);
+        }}
+        className={[
+          'flex items-center rounded-md text-sm select-none',
+          isDragging ? 'opacity-30 cursor-grabbing' : 'cursor-grab',
+          isInside
+            ? 'bg-[#a3e635]/20 ring-1 ring-[#a3e635]'
+            : isSelected
+            ? 'bg-[#a3e635] text-black font-medium'
+            : 'text-[#e5e5e5] hover:bg-[#1f1f1f]',
+        ].filter(Boolean).join(' ')}
       >
-     
+        <div className="flex-shrink-0 px-1 text-[#555] pointer-events-none">
+          <GripVertical className="h-3.5 w-3.5" />
+        </div>
+
         <button
           type="button"
           onClick={() => onSelect(node.id)}
@@ -107,12 +161,15 @@ function ScenarioCategoryTreeItem({
         </div>
       </div>
 
+      {isAfter && !hasChildren && <InsertLine />}
+
       {hasChildren && (
-        <div className="border-l border-[#404040] ml-2 pl-2 mt-0.5 space-y-0.5">
+        <div className="border-l border-[#404040] ml-2 pl-2 mt-0.5">
           {node.children.map((child) => (
             <ScenarioCategoryTreeItem
               key={child.id}
               node={child}
+              parentId={node.id}
               depth={depth + 1}
               selectedId={selectedId}
               onSelect={onSelect}
@@ -120,8 +177,12 @@ function ScenarioCategoryTreeItem({
               onEdit={onEdit}
               onDelete={onDelete}
               screenCountsMap={screenCountsMap}
+              draggingId={draggingId}
+              insertPos={insertPos}
+              onRowMouseDown={onRowMouseDown}
             />
           ))}
+          {isAfter && <InsertLine />}
         </div>
       )}
     </div>
@@ -179,6 +240,13 @@ export function AppDetailPage() {
   const [removeScreenConfirmId, setRemoveScreenConfirmId] = useState<string | null>(null);
   const [removingScreen, setRemovingScreen] = useState(false);
   const scenarioSectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const [draggingCatId, setDraggingCatId] = useState<string | null>(null);
+  // mode: 'before'/'after' = insert line at same level; 'inside' = become child of targetId
+  const [insertPos, setInsertPos] = useState<{ targetId: string; mode: 'before' | 'after' | 'inside'; parentId: string | null } | null>(null);
+  const [movingCategory, setMovingCategory] = useState(false);
+  const insertPosRef = useRef<{ targetId: string; mode: 'before' | 'after' | 'inside'; parentId: string | null } | null>(null);
+  const scenarioCategoryFlatRef = useRef<ScenarioCategoryFlat[]>([]);
 
   useEffect(() => {
     if (appId) loadData();
@@ -271,6 +339,9 @@ export function AppDetailPage() {
     () => buildScenarioTree(filteredScenarioCategoriesFlat),
     [filteredScenarioCategoriesFlat]
   );
+
+  // Keep ref in sync so mouse event closures always see latest flat list
+  scenarioCategoryFlatRef.current = scenarioCategoriesFlat;
 
   const filterCategoriesByApp = (data: ScenarioCategoryItem[]) =>
     data.filter((c) => !c.project_id || c.project_id === appId);
@@ -383,6 +454,95 @@ export function AppDetailPage() {
     } finally {
       setDeletingScenarioCategory(false);
     }
+  };
+
+  const startCategoryDrag = (nodeId: string, e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+
+    let dragStarted = false;
+    const startX = e.clientX;
+    const startY = e.clientY;
+
+    // Compute ids of dragged node and all its descendants (can't drop inside self)
+    const draggingNode = findInTree(scenarioCategoryTree, nodeId);
+    const blockedIds = draggingNode ? collectNodeIds(draggingNode) : new Set<string>();
+
+    const onMouseMove = (me: MouseEvent) => {
+      if (!dragStarted) {
+        if (Math.abs(me.clientX - startX) < 4 && Math.abs(me.clientY - startY) < 4) return;
+        dragStarted = true;
+        setDraggingCatId(nodeId);
+      }
+
+      const el = document.elementFromPoint(me.clientX, me.clientY) as HTMLElement | null;
+      const catEl = el?.closest('[data-cat-id]') as HTMLElement | null;
+
+      if (!catEl) {
+        insertPosRef.current = null;
+        setInsertPos(null);
+        return;
+      }
+
+      const targetId = catEl.getAttribute('data-cat-id')!;
+      const rawParentId = catEl.getAttribute('data-cat-parent-id') || null;
+
+      // Can't drop onto self or own descendants
+      if (blockedIds.has(targetId)) {
+        insertPosRef.current = null;
+        setInsertPos(null);
+        return;
+      }
+
+      const rect = catEl.getBoundingClientRect();
+      const relY = me.clientY - rect.top;
+      const ratio = relY / rect.height;
+
+      let mode: 'before' | 'after' | 'inside';
+      let parentId: string | null;
+
+      if (ratio < 0.3) {
+        mode = 'before';
+        parentId = rawParentId;           // same level as target
+      } else if (ratio > 0.7) {
+        mode = 'after';
+        parentId = rawParentId;           // same level as target
+      } else {
+        mode = 'inside';
+        parentId = targetId;              // become child of target
+      }
+
+      const next = { targetId, mode, parentId };
+      insertPosRef.current = next;
+      setInsertPos(next);
+    };
+
+    const onMouseUp = async () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = '';
+
+      const pos = insertPosRef.current;
+      setDraggingCatId(null);
+      setInsertPos(null);
+      insertPosRef.current = null;
+
+      if (!dragStarted || !pos) return;
+
+      setMovingCategory(true);
+      try {
+        await updateScenarioCategory(nodeId, { parent_id: pos.parentId });
+        await refetchScenarioCategories();
+      } catch (err) {
+        console.error('Move failed:', err);
+      } finally {
+        setMovingCategory(false);
+      }
+    };
+
+    document.body.style.cursor = 'grabbing';
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
   };
 
   const handleToggleMark = async (e: React.MouseEvent, screen: Screen) => {
@@ -702,7 +862,7 @@ export function AppDetailPage() {
           {/* Left: tree sidebar */}
           <div className="w-72 flex-shrink-0">
             <div
-              className="sticky overflow-y-auto rounded-xl border border-[#2a2a2a] bg-[#141414] p-4"
+              className={`sticky overflow-y-auto rounded-xl border border-[#2a2a2a] bg-[#141414] p-4 transition-opacity ${movingCategory ? 'opacity-60 pointer-events-none' : ''}`}
               style={{ top: 20, maxHeight: 'calc(100vh - 160px)' }}
             >
               <div className="flex items-center justify-between gap-2 mb-3">
@@ -742,6 +902,7 @@ export function AppDetailPage() {
                 )}
               </div>
 
+
               {filteredScenarioCategoryTree.length === 0 ? (
                 <p className="text-xs text-[#6b6b6b] text-center py-4">
                   {sidebarSearch ? 'Ничего не найдено' : 'Нет категорий'}
@@ -752,6 +913,7 @@ export function AppDetailPage() {
                     <ScenarioCategoryTreeItem
                       key={node.id}
                       node={node}
+                      parentId={null}
                       depth={0}
                       selectedId={scenarioCategoryFilter}
                       onSelect={setScenarioCategoryFilter}
@@ -769,6 +931,9 @@ export function AppDetailPage() {
                       }}
                       onDelete={setDeleteScenarioCategoryId}
                       screenCountsMap={scenarioScreenCountsMap}
+                      draggingId={draggingCatId}
+                      insertPos={insertPos}
+                      onRowMouseDown={startCategoryDrag}
                     />
                   ))}
                 </div>

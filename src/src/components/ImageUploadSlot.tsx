@@ -191,8 +191,6 @@ export function ImageUploadSlot({ value, onChange, fileId, label, aspectRatio = 
                 loop
                 playsInline
                 onClick={(e) => e.stopPropagation()}
-                onMouseEnter={(e) => (e.currentTarget as HTMLVideoElement).play().catch(() => {})}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLVideoElement).pause(); }}
               />
             ) : (
               <img src={resolvedSrc} alt="Preview" className="w-full h-full object-cover" />

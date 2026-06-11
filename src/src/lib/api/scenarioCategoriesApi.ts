@@ -184,6 +184,36 @@ export async function createScenarioCategory(
 }
 
 /**
+ * POST /api/admin/scenarios-categories (local: name + project_id, does NOT create a global tag)
+ */
+export async function createLocalScenarioCategory(
+  projectId: string,
+  name: string,
+  parentId?: string | null,
+): Promise<ScenarioCategoryItem> {
+  const res = await fetch(scenariosCategoriesUrl(), {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({
+      name: name.trim(),
+      project_id: projectId,
+      ...(parentId ? { parent_id: parentId } : {}),
+    }),
+  });
+
+  const json = (await res.json()) as { data?: ScenarioCategoryItem; message?: string } & ScenarioCategoryItem;
+
+  if (!res.ok) {
+    const msg = typeof json.message === 'string' ? json.message : `Request failed: ${res.status}`;
+    throw new Error(msg);
+  }
+
+  const item = json.data ?? (json.id ? (json as ScenarioCategoryItem) : null);
+  if (item) return item;
+  return { id: '', name: name.trim(), project_id: projectId, parent_id: parentId ?? null };
+}
+
+/**
  * PATCH /api/admin/scenarios-categories/:id (project-scoped: update tag_id)
  * Body: { tag_id: "uuid" }
  */

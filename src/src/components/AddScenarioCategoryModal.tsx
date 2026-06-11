@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { fetchTags } from '../lib/api/tagsApi';
+import { fetchTags, createTag } from '../lib/api/tagsApi';
 import { createProjectScenarioCategory, updateProjectScenarioCategory } from '../lib/api/scenarioCategoriesApi';
 
 const TAG_TYPE = 'senary-category';
@@ -33,6 +33,8 @@ export function AddScenarioCategoryModal({
 }: AddScenarioCategoryModalProps) {
   const [tagOptions, setTagOptions] = useState<ScenarioCategoryOption[]>([]);
   const [tagId, setTagId] = useState('');
+  const [newName, setNewName] = useState('');
+  const [mode, setMode] = useState<'new' | 'existing'>('new');
   const [loading, setLoading] = useState(false);
   const [loadingTags, setLoadingTags] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +43,8 @@ export function AddScenarioCategoryModal({
   useEffect(() => {
     if (isOpen) {
       setTagId(isEdit && initialTagId ? initialTagId : '');
+      setNewName('');
+      setMode(isEdit ? 'existing' : 'new');
       setError(null);
       setLoadingTags(true);
       fetchTags(TAG_TYPE)
@@ -55,19 +59,24 @@ export function AddScenarioCategoryModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!tagId.trim()) return;
     setLoading(true);
     setError(null);
     try {
       if (isEdit && editId) {
+        if (!tagId.trim()) { setError('Выберите тег'); setLoading(false); return; }
         await updateProjectScenarioCategory(editId, tagId.trim());
+      } else if (mode === 'new') {
+        if (!newName.trim()) { setError('Введите название'); setLoading(false); return; }
+        const tag = await createTag(newName.trim(), TAG_TYPE);
+        await createProjectScenarioCategory(projectId, tag.id, parentId ?? undefined);
       } else {
+        if (!tagId.trim()) { setError('Выберите тег'); setLoading(false); return; }
         await createProjectScenarioCategory(projectId, tagId.trim(), parentId ?? undefined);
       }
       onSuccess();
       onClose();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : (isEdit ? 'Ошибка при сохранении' : 'Ошибка при добавлении');
+      const msg = e instanceof Error ? e.message : 'Ошибка при сохранении';
       setError(msg);
     } finally {
       setLoading(false);
@@ -104,26 +113,70 @@ export function AddScenarioCategoryModal({
             </div>
           )}
 
-          <div className="mb-4">
-            <label htmlFor="tag_id" className="block text-sm font-medium text-[#e5e5e5] mb-2">
-              Тег (категория) *
-            </label>
-            <select
-              id="tag_id"
-              value={tagId}
-              onChange={(e) => setTagId(e.target.value)}
-              required
-              disabled={loadingTags}
-              className="w-full px-4 py-2.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg focus:outline-none focus:border-[#a3e635] text-white disabled:opacity-50"
-            >
-              <option value="">Выберите тег...</option>
-              {tagOptions.map((opt) => (
-                <option key={opt.id} value={opt.id}>
-                  {opt.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          {!isEdit && (
+            <div className="flex gap-2 mb-4">
+              <button
+                type="button"
+                onClick={() => setMode('new')}
+                className={`flex-1 py-2 text-sm rounded-lg border transition-colors ${
+                  mode === 'new'
+                    ? 'bg-[#a3e635] text-black border-[#a3e635] font-medium'
+                    : 'bg-[#1a1a1a] text-[#a1a1a1] border-[#2a2a2a] hover:text-white'
+                }`}
+              >
+                Новый локальный
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('existing')}
+                className={`flex-1 py-2 text-sm rounded-lg border transition-colors ${
+                  mode === 'existing'
+                    ? 'bg-[#a3e635] text-black border-[#a3e635] font-medium'
+                    : 'bg-[#1a1a1a] text-[#a1a1a1] border-[#2a2a2a] hover:text-white'
+                }`}
+              >
+                Из базы
+              </button>
+            </div>
+          )}
+
+          {(isEdit || mode === 'existing') ? (
+            <div className="mb-4">
+              <label htmlFor="tag_id" className="block text-sm font-medium text-[#e5e5e5] mb-2">
+                Тег (из базы) *
+              </label>
+              <select
+                id="tag_id"
+                value={tagId}
+                onChange={(e) => setTagId(e.target.value)}
+                required
+                disabled={loadingTags}
+                className="w-full px-4 py-2.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg focus:outline-none focus:border-[#a3e635] text-white disabled:opacity-50"
+              >
+                <option value="">Выберите тег...</option>
+                {tagOptions.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div className="mb-4">
+              <label htmlFor="new_name" className="block text-sm font-medium text-[#e5e5e5] mb-2">
+                Название *
+              </label>
+              <input
+                id="new_name"
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Введите название сценария..."
+                autoFocus
+                className="w-full px-4 py-2.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg focus:outline-none focus:border-[#a3e635] text-white placeholder:text-[#6b6b6b]"
+              />
+            </div>
+          )}
 
           <div className="flex gap-3 justify-end mt-6">
             <button

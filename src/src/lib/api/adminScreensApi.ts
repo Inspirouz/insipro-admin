@@ -13,7 +13,7 @@ const getApiBase = (): string => {
 
 export interface CreateAdminScreenBody {
   project_id: string;
-  screens_category_id: string;
+  screens_category_id?: string;
   imageIds: string[];
   senarys: string[];
   ui_elements: string[];
