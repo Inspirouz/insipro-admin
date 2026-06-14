@@ -1,4 +1,4 @@
-import { getToken } from '../auth';
+import { getToken, authedFetch, handleUnauthorizedStatus } from '../auth';
 import type { App } from '../types';
 
 const getApiBase = (): string => {
@@ -145,7 +145,7 @@ export async function fetchProjects(search?: string): Promise<App[]> {
   const headers: HeadersInit = { 'Content-Type': 'application/json' };
   if (token) (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(fullUrl, { method: 'GET', headers });
+  const res = await authedFetch(fullUrl, { method: 'GET' });
   const json: ProjectsApiResponse = await res.json();
 
   if (!res.ok) {
@@ -178,7 +178,7 @@ export async function fetchProject(id: string): Promise<App | null> {
   const headers: HeadersInit = { 'Content-Type': 'application/json' };
   if (token) (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(fullUrl, { method: 'GET', headers });
+  const res = await authedFetch(fullUrl, { method: 'GET' });
   const json: ProjectDetailApiResponse = await res.json();
 
   if (!res.ok) {
@@ -213,7 +213,7 @@ export async function createProject(body: CreateProjectBody): Promise<App> {
   const headers: HeadersInit = { 'Content-Type': 'application/json' };
   if (token) (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(url, {
+  const res = await authedFetch(url, {
     method: 'POST',
     headers,
     body: JSON.stringify({
@@ -261,7 +261,7 @@ export async function updateProject(id: string, body: UpdateProjectBody): Promis
   const headers: HeadersInit = { 'Content-Type': 'application/json' };
   if (token) (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(fullUrl, {
+  const res = await authedFetch(fullUrl, {
     method: 'PATCH',
     headers,
     body: JSON.stringify({
@@ -299,7 +299,7 @@ export async function deleteProject(id: string): Promise<void> {
   const headers: HeadersInit = { 'Content-Type': 'application/json' };
   if (token) (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(fullUrl, { method: 'DELETE', headers });
+  const res = await authedFetch(fullUrl, { method: 'DELETE' });
 
   if (!res.ok) {
     let msg = `Request failed: ${res.status}`;
@@ -326,7 +326,7 @@ export async function toggleProjectStatus(id: string, isActive: boolean): Promis
   const headers: HeadersInit = { 'Content-Type': 'application/json' };
   if (token) (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(fullUrl, {
+  const res = await authedFetch(fullUrl, {
     method: 'PATCH',
     headers,
     body: JSON.stringify({ is_active: isActive }),

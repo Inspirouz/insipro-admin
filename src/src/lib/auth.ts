@@ -101,3 +101,15 @@ export async function logout() {
   }
   clearToken();
 }
+
+/** Fetch wrapper that auto-clears token and redirects to /login on 401 */
+export async function authedFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  const token = getToken();
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const existing = (options.headers ?? {}) as Record<string, string>;
+  Object.assign(headers, existing);
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(url, { ...options, headers });
+  if (res.status === 401) handleUnauthorizedStatus(401);
+  return res;
+}

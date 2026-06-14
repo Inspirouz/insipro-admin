@@ -1,4 +1,4 @@
-import { getToken, handleUnauthorizedStatus } from '../auth';
+import { getToken, authedFetch, handleUnauthorizedStatus } from '../auth';
 import type { Scenario } from '../types';
 
 const getApiBase = (): string => {
@@ -51,7 +51,7 @@ export async function fetchScenarios(search?: string): Promise<Scenario[]> {
   const query = params.toString();
   const url = query ? `${baseUrl}?${query}` : baseUrl;
 
-  const res = await fetch(url, { method: 'GET', headers: headers() });
+  const res = await authedFetch(url, { method: 'GET', headers: headers() });
   handleUnauthorizedStatus(res.status);
   const json: ListResponse | ScenarioItem[] = await res.json();
 
@@ -111,7 +111,7 @@ export async function fetchAdminScenariosByProject(
   params.set('project_id', projectId);
   const url = `${baseUrl}?${params.toString()}`;
 
-  const res = await fetch(url, { method: 'GET', headers: headers() });
+  const res = await authedFetch(url, { method: 'GET', headers: headers() });
   handleUnauthorizedStatus(res.status);
   const json: { success?: boolean; data?: unknown; message?: string } = await res.json();
 
@@ -136,7 +136,7 @@ export interface CreateScenarioBody {
  */
 export async function createScenario(body: CreateScenarioBody): Promise<ScenarioItem> {
   const url = scenariosUrl();
-  const res = await fetch(url, {
+  const res = await authedFetch(url, {
     method: 'POST',
     headers: headers(),
     body: JSON.stringify(body),

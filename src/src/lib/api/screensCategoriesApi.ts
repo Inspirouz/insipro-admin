@@ -1,4 +1,4 @@
-import { getToken, handleUnauthorizedStatus } from '../auth';
+import { getToken, authedFetch, handleUnauthorizedStatus } from '../auth';
 
 const getApiBase = (): string => {
   try {
@@ -59,7 +59,7 @@ export async function fetchScreensCategories(search?: string, projectId?: string
   const query = params.toString();
   const url = query ? `${baseUrl}?${query}` : baseUrl;
 
-  const res = await fetch(url, { method: 'GET', headers: headers() });
+  const res = await authedFetch(url, { method: 'GET', headers: headers() });
   handleUnauthorizedStatus(res.status);
   const json: ListResponse | ScreenCategoryItem[] = await res.json();
 

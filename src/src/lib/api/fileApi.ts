@@ -1,4 +1,4 @@
-import { getToken, handleUnauthorizedStatus } from '../auth';
+import { getToken, authedFetch, handleUnauthorizedStatus } from '../auth';
 
 const getApiBase = (): string => {
   try {
@@ -117,7 +117,7 @@ export async function uploadFileWithMeta(file: File): Promise<UploadedFileMeta> 
  */
 export async function deleteFile(id: string): Promise<void> {
   const url = `${fileBaseUrl()}/${encodeURIComponent(id)}`;
-  const res = await fetch(url, {
+  const res = await authedFetch(url, {
     method: 'DELETE',
     headers: fileUploadHeaders(),
   });

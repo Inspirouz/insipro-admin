@@ -1,4 +1,4 @@
-import { getToken } from '../auth';
+import { getToken, authedFetch, handleUnauthorizedStatus } from '../auth';
 import type { User, SubscriptionStatus } from '../types';
 
 const getApiBase = (): string => {
@@ -85,6 +85,7 @@ export async function fetchAdminUsers(params?: { search?: string; status?: strin
   const json: ListResponse | ApiUserItem[] = await res.json();
 
   if (!res.ok) {
+    handleUnauthorizedStatus(res.status);
     const msg = typeof (json as { message?: string }).message === 'string'
       ? (json as { message: string }).message
       : `Request failed: ${res.status}`;
@@ -130,4 +131,27 @@ export async function updateAdminUser(
     subscription_status: data.subscriptionStatus ?? 'trial',
     created_at: new Date().toISOString(),
   });
+}
+
+export interface UserStats {
+  total: number;
+  new_this_week: number;
+  new_this_month: number;
+  google_count: number;
+  email_count: number;
+  active_count: number;
+  daily_registrations: Array<{ date: string; count: number }>;
+}
+
+export async function fetchAdminUserStats(): Promise<UserStats> {
+  const res = await fetch(adminUsersUrl('stats'), {
+    method: 'GET',
+    headers: adminUsersHeaders(),
+  });
+  const json = await res.json() as { data?: UserStats; status_code?: number } & UserStats;
+  if (!res.ok) {
+    handleUnauthorizedStatus(res.status);
+    throw new Error('Request failed: ' + res.status);
+  }
+  return (json.data ?? json) as UserStats;
 }

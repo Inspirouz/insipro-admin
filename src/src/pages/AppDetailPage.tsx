@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useParams, useSearchParams, Link } from 'react-router-dom';
+import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, Circle, GripVertical, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { fetchProject } from '../lib/api/projectsApi';
 import { fetchScreensCategories } from '../lib/api/screensCategoriesApi';
@@ -199,6 +199,17 @@ function getTabFromSearchParams(searchParams: URLSearchParams): TabId {
 
 export function AppDetailPage() {
   const { id: appId } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+
+  // Restore scroll after returning from screen detail
+  useEffect(() => {
+    const key = `app-detail-scroll-${appId}`;
+    const saved = sessionStorage.getItem(key);
+    if (saved) {
+      requestAnimationFrame(() => window.scrollTo({ top: Number(saved), behavior: 'instant' }));
+      sessionStorage.removeItem(key);
+    }
+  }, [appId]);
   const [searchParams, setSearchParams] = useSearchParams();
 
   const activeTab = getTabFromSearchParams(searchParams);
@@ -783,7 +794,7 @@ export function AppDetailPage() {
                     }`}
                   >
                     {/* Image — click to navigate */}
-                    <Link to={`/screens/${screen.id}`} className="block relative aspect-[9/16] bg-[#1a1a1a]">
+                    <div className="block relative aspect-[9/16] bg-[#1a1a1a] cursor-pointer" onClick={() => { sessionStorage.setItem(`app-detail-scroll-${appId}`, String(window.scrollY)); navigate(`/screens/${screen.id}`); }}>
                       <img
                         src={screen.imageUrl}
                         alt="Screen"
@@ -801,7 +812,7 @@ export function AppDetailPage() {
                           : <Circle className="h-4 w-4 text-white/40" />
                         }
                       </button>
-                    </Link>
+                    </div>
                     {/* Bottom bar */}
                     <div className="p-2 flex items-center justify-between gap-1">
                       <p className="text-xs text-[#a1a1a1] truncate flex-1 min-w-0">

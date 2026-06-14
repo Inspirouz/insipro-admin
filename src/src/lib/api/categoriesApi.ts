@@ -1,4 +1,4 @@
-import { getToken } from '../auth';
+import { getToken, authedFetch, handleUnauthorizedStatus } from '../auth';
 
 const getApiBase = (): string => {
   try {
@@ -33,7 +33,7 @@ export async function fetchCategories(): Promise<CategoryItem[]> {
   const headers: HeadersInit = { 'Content-Type': 'application/json' };
   if (token) (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(url, { method: 'GET', headers });
+  const res = await authedFetch(url, { method: 'GET' });
   const json: CategoriesApiResponse | CategoryItem[] = await res.json();
 
   if (!res.ok) {
@@ -61,7 +61,7 @@ export async function fetchAppCategories(): Promise<CategoryItem[]> {
   const headers: HeadersInit = { 'Content-Type': 'application/json' };
   if (token) (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(url, { method: 'GET', headers });
+  const res = await authedFetch(url, { method: 'GET' });
   const json: CategoriesApiResponse | CategoryItem[] = await res.json();
 
   if (!res.ok) {

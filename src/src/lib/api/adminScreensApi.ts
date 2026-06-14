@@ -1,4 +1,4 @@
-import { getToken } from '../auth';
+import { getToken, authedFetch, handleUnauthorizedStatus } from '../auth';
 import { getProjectImageUrl } from './projectsApi';
 import type { Screen } from '../types';
 
@@ -63,7 +63,7 @@ export async function fetchAdminScreens(projectId: string): Promise<Screen[]> {
   const params = new URLSearchParams();
   params.set('projectId', projectId);
   const url = `${screensUrl()}?${params.toString()}`;
-  const res = await fetch(url, { method: 'GET', headers: headers() });
+  const res = await authedFetch(url, { method: 'GET', headers: headers() });
   const json: ListResponse | ApiScreenItem[] = await res.json();
 
   if (!res.ok) {
@@ -131,7 +131,7 @@ export async function fetchAdminScreens(projectId: string): Promise<Screen[]> {
  */
 export async function fetchAdminScreen(id: string): Promise<Screen> {
   const url = `${screensUrl()}/${encodeURIComponent(id)}`;
-  const res = await fetch(url, { method: 'GET', headers: headers() });
+  const res = await authedFetch(url, { method: 'GET', headers: headers() });
   const json = (await res.json()) as { data?: ApiScreenItem; message?: string } & ApiScreenItem;
 
   if (!res.ok) {
@@ -178,7 +178,7 @@ export interface UpdateAdminScreenBody {
  */
 export async function updateAdminScreen(id: string, body: UpdateAdminScreenBody): Promise<void> {
   const url = `${screensUrl()}/${encodeURIComponent(id)}`;
-  const res = await fetch(url, {
+  const res = await authedFetch(url, {
     method: 'PATCH',
     headers: headers(),
     body: JSON.stringify(body),
@@ -201,7 +201,7 @@ export async function updateAdminScreen(id: string, body: UpdateAdminScreenBody)
  */
 export async function deleteAdminScreen(id: string): Promise<void> {
   const url = `${screensUrl()}/${encodeURIComponent(id)}`;
-  const res = await fetch(url, { method: 'DELETE', headers: headers() });
+  const res = await authedFetch(url, { method: 'DELETE', headers: headers() });
 
   if (!res.ok) {
     let msg = `Request failed: ${res.status}`;

@@ -116,7 +116,11 @@ export function AdminsPage() {
     }
   };
 
-  const filtered = items.filter((item) => {
+  const adminItems = items.filter((item) =>
+    item.role === 'SUPER_ADMIN' || item.role === 'ADMIN'
+  );
+
+  const filtered = adminItems.filter((item) => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     return (
