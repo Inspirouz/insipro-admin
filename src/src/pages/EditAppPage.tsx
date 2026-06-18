@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Trash2 } from 'lucide-react';
-import { fetchProject, updateProject, deleteProject } from '../lib/api/projectsApi';
+import { fetchProject, updateProject, deleteProject, rawImagePath } from '../lib/api/projectsApi';
 import { fetchCategories } from '../lib/api/categoriesApi';
 import type { CategoryItem } from '../lib/api/categoriesApi';
 import { PageHeader } from '../components/PageHeader';
@@ -39,13 +39,14 @@ export function EditAppPage() {
       ]);
       if (!app) return;
       setCategories(categoriesData);
+      const rawPreviews = app.previewUrls.slice(0, 5).map((u) => rawImagePath(u));
       setFormData({
         name: app.name,
         description: app.description,
-        iconUrl: app.iconUrl || null,
+        iconUrl: rawImagePath(app.iconUrl),
         previewUrls: [
-          ...app.previewUrls.slice(0, 5),
-          ...Array(5 - app.previewUrls.length).fill(null),
+          ...rawPreviews,
+          ...Array(5 - rawPreviews.length).fill(null),
         ],
         categoryId: app.categoryId,
         platforms: app.platforms,

@@ -40,6 +40,19 @@ export function getProjectImageUrl(path: string | null | undefined): string {
   return `${base}/${trimmed.replace(/^\//, '')}`;
 }
 
+
+/** Extract the raw filename from a full image URL back to the original filename/path.
+ *  Use this before sending images back to the API (which expects raw filenames). */
+export function rawImagePath(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) return trimmed;
+  const base = getProjectImageBase().replace(/\/$/, '') + '/';
+  if (trimmed.startsWith(base)) return trimmed.slice(base.length);
+  return trimmed;
+}
+
 /** API category object inside project */
 interface ApiCategory {
   id: string;
@@ -63,7 +76,7 @@ interface ApiProjectItem {
   platforms?: string[];
   logo?: string | null;
   categories?: ApiCategory[];
-  images?: ApiImage[];
+  images?: (string | ApiImage)[];
   created_at?: string;
   is_active?: boolean;
   [key: string]: unknown;
@@ -99,7 +112,13 @@ function mapProject(p: ApiProjectItem): App {
 
   const previewUrls = Array.isArray(p.images)
     ? p.images
-        .map((img) => getProjectImageUrl(typeof img.path === 'string' ? img.path : ''))
+        .map((img) => {
+            const raw = typeof img === 'string' ? img
+              : typeof img?.path === 'string' ? img.path
+              : typeof (img as Record<string, unknown>)?.url === 'string' ? (img as Record<string, unknown>).url as string
+              : '';
+            return getProjectImageUrl(raw);
+        })
         .filter(Boolean)
     : [];
 
