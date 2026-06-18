@@ -11,6 +11,13 @@ import { SearchInput } from '../components/SearchInput';
 const SEARCH_DEBOUNCE_MS = 300;
 type StatusFilter = 'all' | 'active' | 'draft';
 
+const VIDEO_EXTS = /\.(mp4|webm|mov|ogg)(\?.*)?$/i;
+function isVideoUrl(url: string): boolean {
+  if (!url) return false;
+  if (/\/video__[^/]+$/i.test(url)) return true;
+  return VIDEO_EXTS.test(url);
+}
+
 export function AppsPage() {
   const [apps, setApps] = useState<App[]>([]);
   const [categories, setCategories] = useState<CategoryItem[]>([]);
@@ -152,11 +159,22 @@ export function AppsPage() {
 
               <div className="aspect-video bg-bg-tertiary relative overflow-hidden">
                 {(app.previewUrls[0] || app.iconUrl) ? (
-                  <img
-                    src={app.previewUrls[0] || app.iconUrl || ''}
-                    alt={app.name}
-                    className="w-full h-full object-cover"
-                  />
+                  isVideoUrl(app.previewUrls[0] || '') ? (
+                    <video
+                      src={app.previewUrls[0]}
+                      className="w-full h-full object-cover"
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                    />
+                  ) : (
+                    <img
+                      src={app.previewUrls[0] || app.iconUrl || ''}
+                      alt={app.name}
+                      className="w-full h-full object-cover"
+                    />
+                  )
                 ) : (
                   <div className="flex items-center justify-center h-full text-text-tertiary">
                     Нет превью

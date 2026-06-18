@@ -187,6 +187,7 @@ export function ImageUploadSlot({ value, onChange, fileId, label, aspectRatio = 
               <video
                 src={resolvedSrc}
                 className="w-full h-full object-cover"
+                autoPlay
                 muted
                 loop
                 playsInline
