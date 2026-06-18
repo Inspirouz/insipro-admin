@@ -95,11 +95,11 @@ export function ScreenDetailPage() {
     setSaving(true);
     try {
       await updateAdminScreen(screenId, {
-        ...(formData.categoryIds[0] ? { screens_category_id: formData.categoryIds[0] } : {}),
+        ...(formData.patternIds[0] ? { screens_category_id: formData.patternIds[0] } : {}),
+        screens_category_ids: formData.patternIds,
         ...(imageIds.length > 0 && { imageIds }),
         senarys: formData.scenarioIds,
         ui_elements: formData.uiElementIds,
-        patterns: formData.patternIds,
       });
       setToast({ message: 'Изменения сохранены', type: 'success' });
       setTimeout(() => navigate(appId ? `/apps/${appId}` : '/screens'), 1000);
@@ -145,7 +145,7 @@ export function ScreenDetailPage() {
       const cat = await createScreenCategory(name);
       const newItem: TaxonomyItem = { id: cat.id, name: cat.name, type: 'screenCategory' };
       setScreenCategories((prev) => [...prev, newItem]);
-      setFormData((prev) => ({ ...prev, categoryIds: [...prev.categoryIds, newItem.id] }));
+      setFormData((prev) => ({ ...prev, patternIds: [...prev.patternIds, newItem.id] }));
     } catch (e) {
       console.error(e);
     }
@@ -219,12 +219,12 @@ export function ScreenDetailPage() {
         {/* Form */}
         <div className="flex-1">
           <div className="bg-[#141414] border border-[#2a2a2a] rounded-xl p-6 space-y-6">
-            {/* Screen Category / Паттерны */}
+            {/* Паттерны (screen categories) */}
             <MultiSelectField
               label="Паттерны"
               items={screenCategories}
-              selectedIds={formData.categoryIds}
-              onChange={(ids) => setFormData((prev) => ({ ...prev, categoryIds: ids }))}
+              selectedIds={formData.patternIds}
+              onChange={(ids) => setFormData((prev) => ({ ...prev, patternIds: ids }))}
               onAddNew={() => setAddPatternOpen(true)}
             />
 

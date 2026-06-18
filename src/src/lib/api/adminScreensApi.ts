@@ -14,6 +14,7 @@ const getApiBase = (): string => {
 export interface CreateAdminScreenBody {
   project_id: string;
   screens_category_id?: string;
+  screens_category_ids?: string[];
   imageIds: string[];
   senarys: string[];
   ui_elements: string[];
@@ -158,7 +159,9 @@ export async function fetchAdminScreen(id: string): Promise<Screen> {
     categoryId: s.screens_category_id ?? '',
     scenarioIds: toIds(s.senarys as Array<{ id: string } | string> | undefined),
     uiElementIds: toIds(s.ui_elements as Array<{ id: string } | string> | undefined),
-    patternIds: toIds(s.patterns as Array<{ id: string } | string> | undefined),
+    patternIds: Array.isArray((s as Record<string, unknown>).screens_category_ids) && ((s as Record<string, unknown>).screens_category_ids as string[]).length > 0
+      ? ((s as Record<string, unknown>).screens_category_ids as string[]).filter((v): v is string => typeof v === 'string' && !!v)
+      : toIds(s.patterns as Array<{ id: string } | string> | undefined),
     isMarked: s.is_marked ?? false,
     createdAt: s.created_at ? new Date(s.created_at) : new Date(),
   };
@@ -166,6 +169,7 @@ export async function fetchAdminScreen(id: string): Promise<Screen> {
 
 export interface UpdateAdminScreenBody {
   screens_category_id?: string;
+  screens_category_ids?: string[];
   imageIds?: string[];
   senarys?: string[];
   ui_elements?: string[];

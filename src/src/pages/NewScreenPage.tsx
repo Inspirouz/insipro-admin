@@ -98,7 +98,7 @@ export function NewScreenPage() {
     if (!lastScreen) return;
     setFormData((prev) => ({
       ...prev,
-      categoryIds: lastScreen.categoryId ? [lastScreen.categoryId] : [],
+      categoryIds: lastScreen.patternIds.length > 0 ? lastScreen.patternIds : (lastScreen.categoryId ? [lastScreen.categoryId] : []),
       scenarioIds: lastScreen.scenarioIds,
       uiElementIds: lastScreen.uiElementIds,
       patternIds: lastScreen.patternIds,
@@ -122,6 +122,7 @@ export function NewScreenPage() {
       await createAdminScreen({
         project_id: appId,
         ...(formData.categoryIds[0] ? { screens_category_id: formData.categoryIds[0] } : {}),
+        screens_category_ids: formData.categoryIds,
         imageIds: formData.imageId ? [formData.imageId] : [],
         senarys: formData.scenarioIds,
         ui_elements: formData.uiElementIds,

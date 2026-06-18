@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Search, Plus, Check } from 'lucide-react';
+import { X, ChevronDown, Search, Plus, Check } from 'lucide-react';
 import { fetchTags, createTag } from '../lib/api/tagsApi';
 import { createProjectScenarioCategory, updateProjectScenarioCategory } from '../lib/api/scenarioCategoriesApi';
 
@@ -34,61 +34,59 @@ export function AddScenarioCategoryModal({
   const [tagOptions, setTagOptions] = useState<ScenarioCategoryOption[]>([]);
   const [tagId, setTagId] = useState('');
   const [newName, setNewName] = useState('');
-  const [tagSearch, setTagSearch] = useState('');
   const [mode, setMode] = useState<'new' | 'existing'>('new');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingTags, setLoadingTags] = useState(false);
   const [addingToDb, setAddingToDb] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const isEdit = !!editId;
 
   useEffect(() => {
     if (isOpen) {
       setTagId(isEdit && initialTagId ? initialTagId : '');
       setNewName('');
-      setTagSearch('');
+      setSearch('');
+      setDropdownOpen(false);
       setMode(isEdit ? 'existing' : 'new');
       setError(null);
       setLoadingTags(true);
       fetchTags(TAG_TYPE)
         .then((tags) => setTagOptions(tags.map((t) => ({ id: t.id, name: t.name }))))
-        .catch((e) => {
-          console.error(e);
-          setTagOptions([]);
-        })
+        .catch((e) => { console.error(e); setTagOptions([]); })
         .finally(() => setLoadingTags(false));
     }
   }, [isOpen, isEdit, initialTagId]);
 
   useEffect(() => {
-    if ((isEdit || mode === 'existing') && isOpen) {
-      setTimeout(() => searchInputRef.current?.focus(), 50);
-    }
-  }, [mode, isOpen, isEdit]);
-
-  const filteredOptions = tagOptions.filter((opt) =>
-    opt.name.toLowerCase().includes(tagSearch.toLowerCase().trim())
-  );
+    if (dropdownOpen) setTimeout(() => searchRef.current?.focus(), 30);
+  }, [dropdownOpen]);
 
   const selectedOption = tagOptions.find((o) => o.id === tagId);
+  const filteredOptions = tagOptions.filter((o) =>
+    o.name.toLowerCase().includes(search.toLowerCase().trim())
+  );
+
+  const handleSelect = (id: string) => {
+    setTagId(id);
+    setDropdownOpen(false);
+    setSearch('');
+  };
 
   const handleAddToDb = async () => {
-    const name = tagSearch.trim();
+    const name = search.trim();
     if (!name) return;
     const exists = tagOptions.find((o) => o.name.toLowerCase() === name.toLowerCase());
-    if (exists) {
-      setTagId(exists.id);
-      return;
-    }
+    if (exists) { handleSelect(exists.id); return; }
     setAddingToDb(true);
     setError(null);
     try {
       const tag = await createTag(name, TAG_TYPE);
       const newOpt = { id: tag.id, name: tag.name || name };
       setTagOptions((prev) => [...prev, newOpt]);
-      setTagId(newOpt.id);
-      setTagSearch('');
+      handleSelect(newOpt.id);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка при создании тега');
     } finally {
@@ -138,11 +136,7 @@ export function AddScenarioCategoryModal({
                 ? `Добавить подкатегорию в "${parentName}"`
                 : 'Добавить категорию сценариев'}
           </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 hover:bg-[#1a1a1a] rounded transition-colors text-[#a1a1a1] hover:text-white"
-          >
+          <button type="button" onClick={onClose} className="p-1 hover:bg-[#1a1a1a] rounded transition-colors text-[#a1a1a1] hover:text-white">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -158,7 +152,7 @@ export function AddScenarioCategoryModal({
             <div className="flex gap-2 mb-4">
               <button
                 type="button"
-                onClick={() => setMode('new')}
+                onClick={() => { setMode('new'); setDropdownOpen(false); }}
                 className={`flex-1 py-2 text-sm rounded-lg border transition-colors ${
                   mode === 'new'
                     ? 'bg-[#a3e635] text-black border-[#a3e635] font-medium'
@@ -187,76 +181,90 @@ export function AddScenarioCategoryModal({
                 Тег (из базы) *
               </label>
 
-              {/* Selected tag chip */}
-              {selectedOption && (
-                <div className="flex items-center gap-2 mb-2 px-3 py-1.5 bg-[#a3e635]/10 border border-[#a3e635]/30 rounded-lg text-sm">
-                  <Check className="h-3.5 w-3.5 text-[#a3e635] shrink-0" />
-                  <span className="text-[#a3e635] font-medium truncate">{selectedOption.name}</span>
-                  <button
-                    type="button"
-                    onClick={() => setTagId('')}
-                    className="ml-auto text-[#a3e635]/60 hover:text-[#a3e635] transition-colors"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              )}
-
-              {/* Search input */}
-              <div className="relative mb-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#6b6b6b] pointer-events-none" />
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={tagSearch}
-                  onChange={(e) => setTagSearch(e.target.value)}
-                  placeholder="Поиск..."
+              {/* Dropdown trigger */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setDropdownOpen((v) => !v)}
                   disabled={loadingTags}
-                  className="w-full pl-9 pr-4 py-2.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg focus:outline-none focus:border-[#a3e635] text-white placeholder:text-[#6b6b6b] text-sm disabled:opacity-50"
-                />
-              </div>
+                  className="w-full px-4 py-2.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg focus:outline-none focus:border-[#a3e635] transition-colors text-left flex items-center justify-between disabled:opacity-50"
+                >
+                  <span className={selectedOption ? 'text-white' : 'text-[#6b6b6b]'}>
+                    {loadingTags ? 'Загрузка...' : (selectedOption?.name ?? 'Выберите тег...')}
+                  </span>
+                  <ChevronDown className={`h-4 w-4 text-[#6b6b6b] transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
 
-              {/* Options list */}
-              <div className="max-h-44 overflow-y-auto rounded-lg border border-[#2a2a2a] bg-[#1a1a1a]">
-                {loadingTags ? (
-                  <div className="px-4 py-3 text-sm text-[#6b6b6b]">Загрузка...</div>
-                ) : filteredOptions.length === 0 ? (
-                  <div className="px-4 py-3 text-sm text-[#6b6b6b]">
-                    {tagSearch ? `Не найдено "${tagSearch}"` : 'Список пуст'}
-                  </div>
-                ) : (
-                  filteredOptions.map((opt) => (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => { setTagId(opt.id); setTagSearch(''); }}
-                      className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center gap-2 ${
-                        tagId === opt.id
-                          ? 'bg-[#a3e635]/10 text-[#a3e635]'
-                          : 'text-white hover:bg-[#242424]'
-                      }`}
-                    >
-                      {tagId === opt.id && <Check className="h-3.5 w-3.5 shrink-0" />}
-                      <span className={tagId === opt.id ? '' : 'pl-[18px]'}>{opt.name}</span>
-                    </button>
-                  ))
+                {dropdownOpen && (
+                  <>
+                    {/* Close on outside click */}
+                    <div className="fixed inset-0 z-10" onClick={() => { setDropdownOpen(false); setSearch(''); }} />
+
+                    <div className="absolute z-20 w-full mt-1 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg shadow-lg overflow-hidden">
+                      {/* Search */}
+                      <div className="flex items-center gap-2 px-3 py-2 border-b border-[#2a2a2a]">
+                        <Search className="h-3.5 w-3.5 text-[#6b6b6b] shrink-0" />
+                        <input
+                          ref={searchRef}
+                          type="text"
+                          value={search}
+                          onChange={(e) => setSearch(e.target.value)}
+                          placeholder="Поиск..."
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex-1 bg-transparent focus:outline-none text-sm text-white placeholder:text-[#6b6b6b]"
+                        />
+                        {search && (
+                          <button type="button" onClick={(e) => { e.stopPropagation(); setSearch(''); }} className="text-[#6b6b6b] hover:text-white">
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Options */}
+                      <div style={{ maxHeight: '128px', overflowY: 'auto' }}>
+                        {filteredOptions.length === 0 ? (
+                          <div className="px-4 py-3 text-sm text-[#6b6b6b] text-center">
+                            {search ? `Не найдено «${search}»` : 'Список пуст'}
+                          </div>
+                        ) : (
+                          filteredOptions.map((opt) => (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              onClick={() => handleSelect(opt.id)}
+                              className="w-full flex items-center gap-3 px-3 py-2 hover:bg-[#242424] transition-colors text-sm text-left"
+                            >
+                              <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                                tagId === opt.id ? 'bg-[#a3e635] border-[#a3e635]' : 'border-[#3a3a3a]'
+                              }`}>
+                                {tagId === opt.id && <Check className="h-2.5 w-2.5 text-black" />}
+                              </div>
+                              <span className="text-white">{opt.name}</span>
+                            </button>
+                          ))
+                        )}
+                      </div>
+
+                      {/* Add to DB */}
+                      <div className="border-t border-[#2a2a2a]">
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleAddToDb(); }}
+                          disabled={!search.trim() || addingToDb}
+                          className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-[#a3e635] hover:bg-[#242424] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <Plus className="h-4 w-4 shrink-0" />
+                          {addingToDb
+                            ? 'Добавление...'
+                            : search.trim()
+                              ? `Добавить «${search.trim()}» в базу`
+                              : 'Добавить в базу'}
+                        </button>
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
-
-              {/* Add to DB button */}
-              <button
-                type="button"
-                onClick={handleAddToDb}
-                disabled={!tagSearch.trim() || addingToDb || loadingTags}
-                className="mt-2 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#1a1a1a] border border-dashed border-[#3a3a3a] rounded-lg text-sm text-[#a1a1a1] hover:border-[#a3e635] hover:text-[#a3e635] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                <Plus className="h-4 w-4" />
-                {addingToDb
-                  ? 'Добавление...'
-                  : tagSearch.trim()
-                    ? `Добавить «${tagSearch.trim()}» в базу`
-                    : 'Добавить в базу'}
-              </button>
             </div>
           ) : (
             <div className="mb-4">
@@ -276,11 +284,7 @@ export function AddScenarioCategoryModal({
           )}
 
           <div className="flex gap-3 justify-end mt-6">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2.5 text-[#a1a1a1] hover:text-white transition-colors"
-            >
+            <button type="button" onClick={onClose} className="px-4 py-2.5 text-[#a1a1a1] hover:text-white transition-colors">
               Отмена
             </button>
             <button

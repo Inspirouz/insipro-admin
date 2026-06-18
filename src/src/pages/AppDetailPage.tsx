@@ -794,11 +794,11 @@ export function AppDetailPage() {
                     }`}
                   >
                     {/* Image — click to navigate */}
-                    <div className="block relative aspect-[9/16] bg-[#1a1a1a] cursor-pointer" onClick={() => { sessionStorage.setItem(`app-detail-scroll-${appId}`, String(window.scrollY)); navigate(`/screens/${screen.id}`); }}>
+                    <div className="block relative bg-[#1a1a1a] cursor-pointer" onClick={() => { sessionStorage.setItem(`app-detail-scroll-${appId}`, String(window.scrollY)); navigate(`/screens/${screen.id}`); }}>
                       <img
                         src={screen.imageUrl}
                         alt="Screen"
-                        className="w-full h-full object-cover"
+                        className="w-full h-auto block"
                       />
                       {/* Mark toggle button */}
                       <button
@@ -813,52 +813,8 @@ export function AppDetailPage() {
                         }
                       </button>
                     </div>
-                    {/* Bottom bar */}
-                    <div className="p-2 flex items-center justify-between gap-1">
-                      <p className="text-xs text-[#a1a1a1] truncate flex-1 min-w-0">
-                        {getCategory(screen.categoryId)?.name ?? <span className="text-orange-400/70">Без категории</span>}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={(e) => handleOpenEdit(e, screen)}
-                        title="Быстро изменить категорию"
-                        className="flex-shrink-0 p-1 rounded hover:bg-[#2a2a2a] text-[#6b6b6b] hover:text-white transition-colors"
-                      >
-                        <Pencil className="h-3 w-3" />
-                      </button>
-                    </div>
-                    {/* Inline quick-edit panel */}
-                    {editingScreenId === screen.id && (
-                      <div className="border-t border-[#2a2a2a] p-2 space-y-2 bg-[#1a1a1a]" onClick={(e) => e.stopPropagation()}>
-                        <select
-                          value={editCategoryId}
-                          onChange={(e) => setEditCategoryId(e.target.value)}
-                          className="w-full px-2 py-1.5 text-xs bg-[#141414] border border-[#2a2a2a] rounded-lg focus:outline-none focus:border-[#a3e635]"
-                        >
-                          <option value="">— без категории —</option>
-                          {screenCategories.map(c => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                          ))}
-                        </select>
-                        <div className="flex gap-1">
-                          <button
-                            type="button"
-                            disabled={savingScreenId === screen.id}
-                            onClick={() => handleSaveEdit(screen.id)}
-                            className="flex-1 py-1 text-xs bg-[#a3e635] text-black font-medium rounded-lg hover:bg-[#b8ec44] disabled:opacity-50"
-                          >
-                            {savingScreenId === screen.id ? '...' : 'Сохранить'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setEditingScreenId(null)}
-                            className="px-2 py-1 text-xs bg-[#2a2a2a] text-white rounded-lg hover:bg-[#3a3a3a]"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </div>
-                      </div>
-                    )}
+
+
                   </div>
                 ))}
               </div>
