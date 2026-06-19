@@ -206,15 +206,15 @@ export function AppsPage() {
 
                 {/* Stats chips */}
                 {stats[app.id] && (
-                  <div className="flex flex-wrap gap-1.5 mt-3">
-                    {[
-                      { label: 'Экр', value: stats[app.id].screens, color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },
-                      { label: 'Сцен', value: stats[app.id].scenarios, color: 'text-purple-400 bg-purple-500/10 border-purple-500/20' },
-                      { label: 'Пат', value: stats[app.id].patterns, color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },
-                      { label: 'UI', value: stats[app.id].ui_elements, color: 'text-orange-400 bg-orange-500/10 border-orange-500/20' },
-                    ].map(({ label, value, color }) => (
-                      <span key={label} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-medium ${color}`}>
-                        {label} <span className="font-bold">{value}</span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
+                    {([
+                      { label: 'Экр', value: stats[app.id].screens, bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.35)', color: '#60a5fa' },
+                      { label: 'Сцен', value: stats[app.id].scenarios, bg: 'rgba(168,85,247,0.15)', border: 'rgba(168,85,247,0.35)', color: '#c084fc' },
+                      { label: 'Пат', value: stats[app.id].patterns, bg: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.35)', color: '#34d399' },
+                      { label: 'UI', value: stats[app.id].ui_elements, bg: 'rgba(249,115,22,0.15)', border: 'rgba(249,115,22,0.35)', color: '#fb923c' },
+                    ] as const).map(({ label, value, bg, border, color }) => (
+                      <span key={label} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 7px', borderRadius: '5px', border: `1px solid ${border}`, background: bg, fontSize: '11px', fontWeight: 500, color, whiteSpace: 'nowrap' }}>
+                        {label} <b style={{ fontWeight: 700 }}>{value}</b>
                       </span>
                     ))}
                   </div>
