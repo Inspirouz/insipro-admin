@@ -10,6 +10,10 @@ export interface App {
   platforms: ('ios' | 'android' | 'web')[];
   createdAt: Date;
   isActive: boolean;
+  screensCount?: number;
+  scenariosCount?: number;
+  uiElementsCount?: number;
+  patternsCount?: number;
 }
 
 export interface Screen {

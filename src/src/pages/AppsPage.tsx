@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus } from 'lucide-react';
-import { fetchProjects, toggleProjectStatus } from '../lib/api/projectsApi';
+import { fetchProjects, fetchProjectsStats, toggleProjectStatus } from '../lib/api/projectsApi';
+import type { ProjectScreenStats } from '../lib/api/projectsApi';
 import { fetchCategories } from '../lib/api/categoriesApi';
 import type { App } from '../lib/types';
 import type { CategoryItem } from '../lib/api/categoriesApi';
@@ -25,9 +26,11 @@ export function AppsPage() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [toggling, setToggling] = useState<string | null>(null);
+  const [stats, setStats] = useState<Record<string, ProjectScreenStats>>({});
 
   useEffect(() => {
     fetchCategories().then(setCategories).catch(() => setCategories([]));
+    fetchProjectsStats().then(setStats).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -200,6 +203,22 @@ export function AppsPage() {
                     <p className="text-xs text-text-secondary">{getCategoryName(app.categoryId)}</p>
                   </div>
                 </div>
+
+                {/* Stats chips */}
+                {stats[app.id] && (
+                  <div className="flex flex-wrap gap-1.5 mt-3">
+                    {[
+                      { label: 'Экр', value: stats[app.id].screens, color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },
+                      { label: 'Сцен', value: stats[app.id].scenarios, color: 'text-purple-400 bg-purple-500/10 border-purple-500/20' },
+                      { label: 'Пат', value: stats[app.id].patterns, color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },
+                      { label: 'UI', value: stats[app.id].ui_elements, color: 'text-orange-400 bg-orange-500/10 border-orange-500/20' },
+                    ].map(({ label, value, color }) => (
+                      <span key={label} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-medium ${color}`}>
+                        {label} <span className="font-bold">{value}</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between gap-2 mt-3">
                   <div className="flex gap-2">

@@ -360,3 +360,24 @@ export async function toggleProjectStatus(id: string, isActive: boolean): Promis
     throw new Error(msg);
   }
 }
+
+export interface ProjectScreenStats {
+  screens: number;
+  scenarios: number;
+  ui_elements: number;
+  patterns: number;
+}
+
+export async function fetchProjectsStats(): Promise<Record<string, ProjectScreenStats>> {
+  const base = getApiBase();
+  const path = base ? '/admin/projects/stats/screens' : '/api/admin/projects/stats/screens';
+  const url = base ? `${base.replace(/\/$/, '')}${path}` : path;
+  try {
+    const res = await authedFetch(url, { method: 'GET' });
+    if (!res.ok) return {};
+    const json = await res.json() as { data?: Record<string, ProjectScreenStats> };
+    return json.data ?? {};
+  } catch {
+    return {};
+  }
+}
