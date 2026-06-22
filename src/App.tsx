@@ -16,6 +16,7 @@ import { ScenarioCategoriesPage } from './src/pages/ScenarioCategoriesPage';
 import { UsersPage } from './src/pages/UsersPage';
 import { AdminsPage } from './src/pages/AdminsPage';
 import { SettingsPage } from './src/pages/SettingsPage';
+import { AnalyticsPage } from './src/pages/AnalyticsPage';
 import { DashboardLayout } from './src/components/DashboardLayout';
 import { ProtectedRoute } from './src/components/ProtectedRoute';
 
@@ -27,6 +28,7 @@ export default function App() {
         
         <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
           <Route path="/" element={<Navigate to="/apps" replace />} />
+          <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/apps" element={<AppsPage />} />
           <Route path="/apps/new" element={<NewAppPage />} />
           <Route path="/apps/:id" element={<AppDetailPage />} />

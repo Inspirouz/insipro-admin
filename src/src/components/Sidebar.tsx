@@ -1,9 +1,10 @@
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { LayoutGrid, Monitor, Tags, Users, ShieldCheck, Settings, LogOut } from 'lucide-react';
+import { LayoutGrid, Monitor, Tags, Users, ShieldCheck, Settings, LogOut, BarChart3 } from 'lucide-react';
 import { logout } from '../lib/auth';
 
 const navigation = [
   { name: 'Приложения', href: '/apps', icon: LayoutGrid },
+  { name: 'Аналитика', href: '/analytics', icon: BarChart3 },
   // { name: 'Экраны', href: '/screens', icon: Monitor },
   { name: 'Категории', href: '/categories', icon: Tags },
   { name: 'Пользователи', href: '/users', icon: Users },
