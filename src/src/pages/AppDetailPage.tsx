@@ -13,9 +13,11 @@ import { AddScreensToScenarioModal } from '../components/AddScreensToScenarioMod
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import type { App, Screen, TaxonomyItem } from '../lib/types';
 
-const VIDEO_EXT = /\.(mp4|webm|mov|m4v|ogg)(\?|$)/i;
+const VIDEO_EXT = /\.(mp4|webm|mov|m4v|ogg|quicktime|avi|mkv)(\?|$)/i;
 function isVideoUrl(url: string | null | undefined): boolean {
-  return !!url && VIDEO_EXT.test(url);
+  if (!url) return false;
+  // Uploaded videos are stored with a "video__" filename prefix; also fall back to extension.
+  return url.toLowerCase().includes("video__") || VIDEO_EXT.test(url);
 }
 function ScreenMedia({ src, className, alt = "" }: { src: string; className?: string; alt?: string }) {
   if (isVideoUrl(src)) {
