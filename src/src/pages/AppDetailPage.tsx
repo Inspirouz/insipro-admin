@@ -13,6 +13,28 @@ import { AddScreensToScenarioModal } from '../components/AddScreensToScenarioMod
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import type { App, Screen, TaxonomyItem } from '../lib/types';
 
+const VIDEO_EXT = /\.(mp4|webm|mov|m4v|ogg)(\?|$)/i;
+function isVideoUrl(url: string | null | undefined): boolean {
+  return !!url && VIDEO_EXT.test(url);
+}
+function ScreenMedia({ src, className, alt = "" }: { src: string; className?: string; alt?: string }) {
+  if (isVideoUrl(src)) {
+    return (
+      <video
+        src={src}
+        className={className}
+        muted
+        loop
+        playsInline
+        controls
+        preload="metadata"
+        onClick={(e) => e.stopPropagation()}
+      />
+    );
+  }
+  return <img src={src} alt={alt} className={className} />;
+}
+
 type ScenarioCategoryFlat = { id: string; name: string; parent_id?: string | null; scenarios_count?: number };
 type ScenarioCategoryNode = { id: string; name: string; children: ScenarioCategoryNode[]; scenarios_count?: number };
 
@@ -795,7 +817,7 @@ export function AppDetailPage() {
                   >
                     {/* Image — click to navigate */}
                     <div className="block relative bg-[#1a1a1a] cursor-pointer" onClick={() => { sessionStorage.setItem(`app-detail-scroll-${appId}`, String(window.scrollY)); navigate(`/screens/${screen.id}`); }}>
-                      <img
+                      <ScreenMedia
                         src={screen.imageUrl}
                         alt="Screen"
                         className="w-full h-auto block"
@@ -953,9 +975,8 @@ export function AppDetailPage() {
                         <Link to={`/screens/${screen.id}`} className="block w-full h-full">
                           <div className="w-full h-full bg-[#1a1a1a]">
                             {screen.imageUrl && (
-                              <img
+                              <ScreenMedia
                                 src={screen.imageUrl}
-                                alt=""
                                 className="w-full h-full object-cover"
                               />
                             )}
