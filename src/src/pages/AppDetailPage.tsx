@@ -28,9 +28,9 @@ function ScreenMedia({ src, className, alt = "" }: { src: string; className?: st
         muted
         loop
         playsInline
-        controls
+        autoPlay
         preload="metadata"
-        onClick={(e) => e.stopPropagation()}
+        style={{ pointerEvents: "none" }}
       />
     );
   }
