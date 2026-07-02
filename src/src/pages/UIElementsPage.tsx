@@ -13,7 +13,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 const TAG_TYPE = 'ui';
 
 function toTaxonomyItem(tag: TagItem): TaxonomyItem {
-  return { id: tag.id, name: tag.name, type: 'uiElement' };
+  return { id: tag.id, name: tag.name, name_uz: tag.name_uz, name_en: tag.name_en, type: 'uiElement' };
 }
 
 export function UIElementsPage() {
@@ -44,11 +44,11 @@ export function UIElementsPage() {
     return () => clearTimeout(t);
   }, [search]);
 
-  const handleSave = async (name: string) => {
+  const handleSave = async (name: string, nameUz: string, nameEn: string) => {
     if (editingItem) {
-      await updateTag(editingItem.id, { name: name.trim(), type: TAG_TYPE });
+      await updateTag(editingItem.id, { name: name.trim(), type: TAG_TYPE, name_uz: nameUz || null, name_en: nameEn || null });
     } else {
-      await createTag(name, TAG_TYPE);
+      await createTag(name, TAG_TYPE, nameUz, nameEn);
     }
     setEditingItem(null);
     loadData(search.trim() || undefined);
@@ -136,6 +136,7 @@ export function UIElementsPage() {
       />
 
       <AddTaxonomyDialog
+        key={editingItem?.id ?? 'new'}
         isOpen={isDialogOpen}
         onClose={() => {
           setIsDialogOpen(false);
@@ -144,6 +145,8 @@ export function UIElementsPage() {
         onSave={handleSave}
         title={editingItem ? 'Редактировать элемент' : 'Добавить UI элемент'}
         initialValue={editingItem?.name}
+        initialNameUz={editingItem?.name_uz ?? ''}
+        initialNameEn={editingItem?.name_en ?? ''}
       />
     </div>
   );

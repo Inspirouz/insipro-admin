@@ -15,7 +15,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 const TAG_TYPE = 'senary-category';
 
 function toTaxonomyItem(tag: TagItem): TaxonomyItem {
-  return { id: tag.id, name: tag.name, type: 'scenarioCategory' };
+  return { id: tag.id, name: tag.name, name_uz: tag.name_uz, name_en: tag.name_en, type: 'scenarioCategory' };
 }
 
 export default function ScenarioCategoriesPage() {

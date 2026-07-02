@@ -18,7 +18,7 @@ import { AddTaxonomyDialog } from '@/components/AddTaxonomyDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 function toTaxonomyItem(item: ScreenCategoryItem): TaxonomyItem {
-  return { id: item.id, name: item.name, type: 'screenCategory' };
+  return { id: item.id, name: item.name, name_uz: item.name_uz, name_en: item.name_en, type: 'screenCategory' };
 }
 
 export default function ScreenCategoriesPage() {

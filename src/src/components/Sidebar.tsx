@@ -9,6 +9,7 @@ const navigation = [
   { name: 'Категории', href: '/categories', icon: Tags },
   { name: 'Пользователи', href: '/users', icon: Users },
   { name: 'Администраторы', href: '/admins', icon: ShieldCheck },
+  { name: 'Клиент', href: '/client-preview', icon: Monitor },
   // { name: 'Настройки', href: '/settings', icon: Settings },
 ];
 

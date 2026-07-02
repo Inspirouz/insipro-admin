@@ -13,7 +13,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 const TAG_TYPE = 'senary-category';
 
 function toTaxonomyItem(tag: TagItem): TaxonomyItem {
-  return { id: tag.id, name: tag.name, type: 'scenarioCategory' };
+  return { id: tag.id, name: tag.name, name_uz: tag.name_uz, name_en: tag.name_en, type: 'scenarioCategory' };
 }
 
 export function ScenarioCategoriesPage() {
@@ -43,11 +43,11 @@ export function ScenarioCategoriesPage() {
     return () => clearTimeout(t);
   }, [search]);
 
-  const handleSave = async (name: string) => {
+  const handleSave = async (name: string, nameUz: string, nameEn: string) => {
     if (editingItem) {
-      await updateTag(editingItem.id, { name: name.trim(), type: TAG_TYPE });
+      await updateTag(editingItem.id, { name: name.trim(), type: TAG_TYPE, name_uz: nameUz || null, name_en: nameEn || null });
     } else {
-      await createTag(name, TAG_TYPE);
+      await createTag(name, TAG_TYPE, nameUz, nameEn);
     }
     setEditingItem(null);
     loadData(search.trim() || undefined);
@@ -135,6 +135,7 @@ export function ScenarioCategoriesPage() {
       />
 
       <AddTaxonomyDialog
+        key={editingItem?.id ?? 'new'}
         isOpen={isDialogOpen}
         onClose={() => {
           setIsDialogOpen(false);
@@ -143,6 +144,8 @@ export function ScenarioCategoriesPage() {
         onSave={handleSave}
         title={editingItem ? 'Редактировать категорию' : 'Добавить категорию сценариев'}
         initialValue={editingItem?.name}
+        initialNameUz={editingItem?.name_uz ?? ''}
+        initialNameEn={editingItem?.name_en ?? ''}
       />
     </div>
   );

@@ -12,6 +12,8 @@ const getApiBase = (): string => {
 export interface CategoryItem {
   id: string;
   name: string;
+  name_uz?: string | null;
+  name_en?: string | null;
 }
 
 /** API response: array or { data: [...] } / { items: [...] } */
@@ -94,7 +96,7 @@ function categoriesHeaders(): HeadersInit {
  * POST /api/categories
  * Body: { name: string }
  */
-export async function createCategory(body: { name: string }): Promise<CategoryItem> {
+export async function createCategory(body: { name: string; name_uz?: string | null; name_en?: string | null }): Promise<CategoryItem> {
   const res = await fetch(categoriesUrl(''), {
     method: 'POST',
     headers: categoriesHeaders(),
@@ -117,7 +119,7 @@ export async function createCategory(body: { name: string }): Promise<CategoryIt
 /**
  * PATCH /api/categories/{id}
  */
-export async function updateCategory(id: string, body: { name: string }): Promise<CategoryItem> {
+export async function updateCategory(id: string, body: { name: string; name_uz?: string | null; name_en?: string | null }): Promise<CategoryItem> {
   const res = await fetch(categoriesUrl(encodeURIComponent(id)), {
     method: 'PATCH',
     headers: categoriesHeaders(),

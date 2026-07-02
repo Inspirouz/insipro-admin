@@ -12,6 +12,8 @@ const getApiBase = (): string => {
 export interface TagItem {
   id: string;
   name: string;
+  name_uz?: string | null;
+  name_en?: string | null;
   type: string;
   [key: string]: unknown;
 }
@@ -69,11 +71,15 @@ export async function fetchTags(type?: string, search?: string): Promise<TagItem
  * POST /api/admin/tags
  * Body: { name: string, type: "patterns" }
  */
-export async function createTag(name: string, type: string): Promise<TagItem> {
+export async function createTag(name: string, type: string, nameUz?: string, nameEn?: string): Promise<TagItem> {
+  const body: Record<string, unknown> = { name: name.trim(), type };
+  if (nameUz) body.name_uz = nameUz.trim();
+  if (nameEn) body.name_en = nameEn.trim();
+
   const res = await fetch(tagsUrl(), {
     method: 'POST',
     headers: tagsHeaders(),
-    body: JSON.stringify({ name: name.trim(), type }),
+    body: JSON.stringify(body),
   });
 
   const json = (await res.json()) as { data?: TagItem; message?: string } & TagItem;
@@ -91,7 +97,7 @@ export async function createTag(name: string, type: string): Promise<TagItem> {
 /**
  * PATCH /api/admin/tags/:id
  */
-export async function updateTag(id: string, body: { name?: string; type?: string }): Promise<TagItem> {
+export async function updateTag(id: string, body: { name?: string; type?: string; name_uz?: string | null; name_en?: string | null }): Promise<TagItem> {
   const res = await fetch(tagsUrl(encodeURIComponent(id)), {
     method: 'PATCH',
     headers: tagsHeaders(),

@@ -17,6 +17,7 @@ import { UsersPage } from './src/pages/UsersPage';
 import { AdminsPage } from './src/pages/AdminsPage';
 import { SettingsPage } from './src/pages/SettingsPage';
 import { AnalyticsPage } from './src/pages/AnalyticsPage';
+import { ClientPreviewPage } from './src/pages/ClientPreviewPage';
 import { DashboardLayout } from './src/components/DashboardLayout';
 import { ProtectedRoute } from './src/components/ProtectedRoute';
 
@@ -29,6 +30,7 @@ export default function App() {
         <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
           <Route path="/" element={<Navigate to="/apps" replace />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
+          <Route path="/client-preview" element={<ClientPreviewPage />} />
           <Route path="/apps" element={<AppsPage />} />
           <Route path="/apps/new" element={<NewAppPage />} />
           <Route path="/apps/:id" element={<AppDetailPage />} />

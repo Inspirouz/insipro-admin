@@ -15,6 +15,8 @@ export function NewAppPage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    descriptionUz: '',
+    descriptionEn: '',
     iconUrl: null as string | null,
     previewUrls: [null, null, null, null, null] as (string | null)[],
     categoryId: '',
@@ -41,6 +43,8 @@ export function NewAppPage() {
       const app = await createProject({
         name: formData.name,
         description: formData.description,
+        descriptionUz: formData.descriptionUz,
+        descriptionEn: formData.descriptionEn,
         logo: formData.iconUrl || null,
         images: formData.previewUrls.filter((u): u is string => u != null),
         platforms: formData.platforms.map((p) => p.toUpperCase()),
@@ -128,7 +132,7 @@ export function NewAppPage() {
               </div>
               <div>
                 <label htmlFor="description" className="block text-sm font-medium mb-2">
-                  Описание
+                  Описание (русский)
                 </label>
                 <textarea
                   id="description"
@@ -138,6 +142,32 @@ export function NewAppPage() {
                   rows={4}
                   placeholder="Кратко опишите приложение"
                   required
+                />
+              </div>
+              <div>
+                <label htmlFor="description_uz" className="block text-sm font-medium mb-2">
+                  Описание (узбекский)
+                </label>
+                <textarea
+                  id="description_uz"
+                  value={formData.descriptionUz}
+                  onChange={(e) => setFormData(prev => ({ ...prev, descriptionUz: e.target.value }))}
+                  className="w-full px-4 py-3 bg-[#141414] border border-[#2a2a2a] rounded-xl focus:outline-none focus:border-[#a3e635] transition-colors resize-none"
+                  rows={4}
+                  placeholder="Ilovani qisqacha tasvirlab bering"
+                />
+              </div>
+              <div>
+                <label htmlFor="description_en" className="block text-sm font-medium mb-2">
+                  Описание (английский)
+                </label>
+                <textarea
+                  id="description_en"
+                  value={formData.descriptionEn}
+                  onChange={(e) => setFormData(prev => ({ ...prev, descriptionEn: e.target.value }))}
+                  className="w-full px-4 py-3 bg-[#141414] border border-[#2a2a2a] rounded-xl focus:outline-none focus:border-[#a3e635] transition-colors resize-none"
+                  rows={4}
+                  placeholder="Briefly describe the app"
                 />
               </div>
             </div>

@@ -20,6 +20,8 @@ export function EditAppPage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    descriptionUz: '',
+    descriptionEn: '',
     iconUrl: null as string | null,
     previewUrls: [null, null, null, null, null] as (string | null)[],
     categoryId: '',
@@ -43,6 +45,8 @@ export function EditAppPage() {
       setFormData({
         name: app.name,
         description: app.description,
+        descriptionUz: app.descriptionUz,
+        descriptionEn: app.descriptionEn,
         iconUrl: rawImagePath(app.iconUrl),
         previewUrls: [
           ...rawPreviews,
@@ -65,6 +69,8 @@ export function EditAppPage() {
       await updateProject(appId, {
         name: formData.name,
         description: formData.description,
+        descriptionUz: formData.descriptionUz,
+        descriptionEn: formData.descriptionEn,
         logo: formData.iconUrl || null,
         images: formData.previewUrls.filter((u): u is string => u != null),
         platforms: formData.platforms.map((p) => p.toUpperCase()),
@@ -188,7 +194,7 @@ export function EditAppPage() {
 
           <div>
             <label htmlFor="description" className="block text-sm font-medium mb-2">
-              Описание
+              Описание (русский)
             </label>
             <textarea
               id="description"
@@ -197,6 +203,32 @@ export function EditAppPage() {
               className="w-full px-4 py-2.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg focus:outline-none focus:border-[#a3e635] transition-colors resize-none"
               rows={3}
               required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="description_uz" className="block text-sm font-medium mb-2">
+              Описание (узбекский)
+            </label>
+            <textarea
+              id="description_uz"
+              value={formData.descriptionUz}
+              onChange={(e) => setFormData(prev => ({ ...prev, descriptionUz: e.target.value }))}
+              className="w-full px-4 py-2.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg focus:outline-none focus:border-[#a3e635] transition-colors resize-none"
+              rows={3}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="description_en" className="block text-sm font-medium mb-2">
+              Описание (английский)
+            </label>
+            <textarea
+              id="description_en"
+              value={formData.descriptionEn}
+              onChange={(e) => setFormData(prev => ({ ...prev, descriptionEn: e.target.value }))}
+              className="w-full px-4 py-2.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg focus:outline-none focus:border-[#a3e635] transition-colors resize-none"
+              rows={3}
             />
           </div>
 

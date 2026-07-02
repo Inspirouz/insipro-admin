@@ -12,6 +12,8 @@ const getApiBase = (): string => {
 export interface ScreenCategoryItem {
   id: string;
   name: string;
+  name_uz?: string | null;
+  name_en?: string | null;
   screens_count?:number;
   is_active?: boolean;
   is_deleted?: boolean;
@@ -78,11 +80,15 @@ export async function fetchScreensCategories(search?: string, projectId?: string
 /**
  * POST /api/admin/screens-categories
  */
-export async function createScreenCategory(name: string): Promise<ScreenCategoryItem> {
+export async function createScreenCategory(name: string, nameUz?: string, nameEn?: string): Promise<ScreenCategoryItem> {
+  const body: Record<string, unknown> = { name: name.trim() };
+  if (nameUz) body.name_uz = nameUz.trim();
+  if (nameEn) body.name_en = nameEn.trim();
+
   const res = await fetch(screensCategoriesUrl(), {
     method: 'POST',
     headers: headers(),
-    body: JSON.stringify({ name: name.trim() }),
+    body: JSON.stringify(body),
   });
 
   const json = (await res.json()) as { data?: ScreenCategoryItem; message?: string } & ScreenCategoryItem;
@@ -100,7 +106,7 @@ export async function createScreenCategory(name: string): Promise<ScreenCategory
 /**
  * PATCH /api/admin/screens-categories/:id
  */
-export async function updateScreenCategory(id: string, body: { name?: string }): Promise<ScreenCategoryItem> {
+export async function updateScreenCategory(id: string, body: { name?: string; name_uz?: string | null; name_en?: string | null }): Promise<ScreenCategoryItem> {
   const res = await fetch(screensCategoriesUrl(encodeURIComponent(id)), {
     method: 'PATCH',
     headers: headers(),

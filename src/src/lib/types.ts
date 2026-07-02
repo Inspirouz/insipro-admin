@@ -4,6 +4,8 @@ export interface App {
   id: string;
   name: string;
   description: string;
+  descriptionUz: string;
+  descriptionEn: string;
   iconUrl: string;
   previewUrls: string[];
   categoryId: string;
@@ -34,6 +36,8 @@ export type TaxonomyType = 'uiElement' | 'pattern' | 'appCategory' | 'screenCate
 export interface TaxonomyItem {
   id: string;
   name: string;
+  name_uz?: string | null;
+  name_en?: string | null;
   screens_count?:number;
   type: TaxonomyType;
 }

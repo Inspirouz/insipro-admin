@@ -31,11 +31,11 @@ export function AppCategoriesPage() {
     }
   };
 
-  const handleSave = async (name: string) => {
+  const handleSave = async (name: string, nameUz: string, nameEn: string) => {
     if (editingItem) {
-      await updateCategory(editingItem.id, { name });
+      await updateCategory(editingItem.id, { name, name_uz: nameUz || null, name_en: nameEn || null });
     } else {
-      await createCategory({ name });
+      await createCategory({ name, name_uz: nameUz || null, name_en: nameEn || null });
     }
     setEditingItem(null);
     loadData();
@@ -133,6 +133,8 @@ export function AppCategoriesPage() {
         onSave={handleSave}
         title={editingItem ? 'Редактировать категорию' : 'Добавить категорию'}
         initialValue={editingItem?.name}
+        initialNameUz={editingItem?.name_uz ?? ''}
+        initialNameEn={editingItem?.name_en ?? ''}
       />
     </div>
   );

@@ -16,7 +16,7 @@ import { AddTaxonomyDialog } from '../components/AddTaxonomyDialog';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 
 function toTaxonomyItem(item: ScreenCategoryItem): TaxonomyItem {
-  return { id: item.id, name: item.name, type: 'screenCategory' };
+  return { id: item.id, name: item.name, name_uz: item.name_uz, name_en: item.name_en, type: 'screenCategory' };
 }
 
 export function ScreenCategoriesPage() {
@@ -46,11 +46,11 @@ export function ScreenCategoriesPage() {
     return () => clearTimeout(t);
   }, [search]);
 
-  const handleSave = async (name: string) => {
+  const handleSave = async (name: string, nameUz: string, nameEn: string) => {
     if (editingItem) {
-      await updateScreenCategory(editingItem.id, { name: name.trim() });
+      await updateScreenCategory(editingItem.id, { name: name.trim(), name_uz: nameUz || null, name_en: nameEn || null });
     } else {
-      await createScreenCategory(name);
+      await createScreenCategory(name, nameUz, nameEn);
     }
     setEditingItem(null);
     loadData(search.trim() || undefined);
@@ -146,6 +146,8 @@ export function ScreenCategoriesPage() {
         onSave={handleSave}
         title={editingItem ? 'Редактировать категорию' : 'Добавить категорию экрана'}
         initialValue={editingItem?.name}
+        initialNameUz={editingItem?.name_uz ?? ''}
+        initialNameEn={editingItem?.name_en ?? ''}
       />
     </div>
   );

@@ -73,6 +73,8 @@ interface ApiProjectItem {
   id: string;
   name?: string;
   description?: string;
+  description_uz?: string;
+  description_en?: string;
   platforms?: string[];
   logo?: string | null;
   categories?: ApiCategory[];
@@ -108,6 +110,8 @@ function mapProject(p: ApiProjectItem): App {
   const id = typeof p.id === 'string' ? p.id : '';
   const name = typeof p.name === 'string' ? p.name : '';
   const description = typeof p.description === 'string' ? p.description : '';
+  const descriptionUz = typeof p.description_uz === 'string' ? p.description_uz : '';
+  const descriptionEn = typeof p.description_en === 'string' ? p.description_en : '';
   const iconUrl = getProjectImageUrl(p.logo);
 
   const previewUrls = Array.isArray(p.images)
@@ -138,6 +142,8 @@ function mapProject(p: ApiProjectItem): App {
     id,
     name,
     description,
+    descriptionUz,
+    descriptionEn,
     iconUrl,
     previewUrls,
     categoryId,
@@ -214,6 +220,8 @@ export async function fetchProject(id: string): Promise<App | null> {
 export interface CreateProjectBody {
   name: string;
   description: string;
+  descriptionUz?: string;
+  descriptionEn?: string;
   logo?: string | null;
   images?: string[];
   platforms: string[];
@@ -238,6 +246,8 @@ export async function createProject(body: CreateProjectBody): Promise<App> {
     body: JSON.stringify({
       name: body.name,
       description: body.description,
+      description_uz: body.descriptionUz ?? '',
+      description_en: body.descriptionEn ?? '',
       logo: body.logo || null,
       images: body.images ?? [],
       platforms: body.platforms,
@@ -261,6 +271,8 @@ export async function createProject(body: CreateProjectBody): Promise<App> {
 export interface UpdateProjectBody {
   name: string;
   description: string;
+  descriptionUz?: string;
+  descriptionEn?: string;
   logo?: string | null;
   images?: string[];
   platforms: string[];
@@ -286,6 +298,8 @@ export async function updateProject(id: string, body: UpdateProjectBody): Promis
     body: JSON.stringify({
       name: body.name,
       description: body.description,
+      description_uz: body.descriptionUz ?? '',
+      description_en: body.descriptionEn ?? '',
       logo: body.logo || null,
       images: body.images ?? [],
       platforms: body.platforms,
