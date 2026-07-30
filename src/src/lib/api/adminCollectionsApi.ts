@@ -12,7 +12,7 @@ const getApiBase = (): string => {
 
 function collectionsUrl(): string {
   const base = getApiBase();
-  const path = base ? '/admin/users/collections' : '/api/admin/users/collections';
+  const path = base ? '/admin/collections' : '/api/admin/collections';
   return base ? `${base.replace(/\/$/, '')}${path}` : path;
 }
 
