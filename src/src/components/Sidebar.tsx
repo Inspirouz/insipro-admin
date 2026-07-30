@@ -1,5 +1,5 @@
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { LayoutGrid, Monitor, Tags, Users, ShieldCheck, Settings, LogOut, BarChart3 } from 'lucide-react';
+import { LayoutGrid, Monitor, Tags, Users, ShieldCheck, LogOut, BarChart3, FolderHeart } from 'lucide-react';
 import { logout } from '../lib/auth';
 
 const navigation = [
@@ -8,6 +8,7 @@ const navigation = [
   // { name: 'Экраны', href: '/screens', icon: Monitor },
   { name: 'Категории', href: '/categories', icon: Tags },
   { name: 'Пользователи', href: '/users', icon: Users },
+  { name: 'Коллекции', href: '/collections', icon: FolderHeart },
   { name: 'Администраторы', href: '/admins', icon: ShieldCheck },
   { name: 'Клиент', href: '/client-preview', icon: Monitor },
   // { name: 'Настройки', href: '/settings', icon: Settings },

@@ -18,6 +18,7 @@ import { AdminsPage } from './src/pages/AdminsPage';
 import { SettingsPage } from './src/pages/SettingsPage';
 import { AnalyticsPage } from './src/pages/AnalyticsPage';
 import { ClientPreviewPage } from './src/pages/ClientPreviewPage';
+import { CollectionsPage } from './src/pages/CollectionsPage';
 import { DashboardLayout } from './src/components/DashboardLayout';
 import { ProtectedRoute } from './src/components/ProtectedRoute';
 
@@ -48,6 +49,7 @@ export default function App() {
           <Route path="/categories/scenarios" element={<ScenarioCategoriesPage />} />
           
           <Route path="/users" element={<UsersPage />} />
+          <Route path="/collections" element={<CollectionsPage />} />
           <Route path="/admins" element={<AdminsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
